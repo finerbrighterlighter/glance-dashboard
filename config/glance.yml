@@ -1,0 +1,36 @@
+server:
+  assets-path: /app/assets
+
+theme:
+  # This will be the default theme
+  background-color: 229 19 23
+  contrast-multiplier: 1.2
+  primary-color: 222 74 74
+  positive-color: 96 44 68
+  negative-color: 359 68 71
+
+  disable-picker: false
+  presets:
+    catppuccin-frappe:
+      background-color: 229 19 23
+      contrast-multiplier: 1.2
+      primary-color: 222 74 74
+      positive-color: 96 44 68
+      negative-color: 359 68 71
+
+    catppuccin-latte:
+      light: true
+      background-color: 220 23 95
+      contrast-multiplier: 1.0
+      primary-color: 220 91 54
+      positive-color: 109 58 40
+      negative-color: 347 87 44
+  # Note: assets are cached by the browser, changes to the CSS file
+  # will not be reflected until the browser cache is cleared (Ctrl+F5)
+  # custom-css-file: assets/catppuccin_latte.css
+
+
+pages:
+  # It's not necessary to create a new file for each page and include it, you can simply
+  # put its contents here, though multiple pages are easier to manage when separated
+  - $include: home.yml

@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.local
+.env.production
+.env.dev
+*.secret
+*.key
+
+# Docker runtime / state
+data/
+volumes/
+tmp/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log

@@ -1,0 +1,660 @@
+- name: Home
+  # Optionally, if you only have a single page you can hide the desktop navigation for a cleaner look
+  # hide-desktop-navigation: true
+  columns:
+    - size: small
+      widgets:
+        - type: clock
+          hour-format: 24h
+          timezones:
+            - timezone: Asia/Yangon
+              label: Pyinmana
+            - timezone: Asia/Tokyo
+              label: Tokyo
+            - timezone: Asia/Hong_Kong
+              label: Hong Kong
+
+        - type: docker-containers
+          hide-by-default: false
+          
+        # - type: custom-api
+        #   title: Mullvad Status
+        #   cache: 30s
+        #   url: https://am.i.mullvad.net/json
+        #   template: |
+        #     <div>
+        #       <div>
+        #         <div>
+        #           {{ $connected := (.JSON.Bool "mullvad_exit_ip") }}
+        #           {{ $ip := (.JSON.String "ip") }}
+        #           {{ $city := (.JSON.String "city") }}
+        #           {{ $country := (.JSON.String "country") }}
+        #           {{ if $connected }}
+        #             <div class="color-highlight size-h3">
+        #               Your VPN is connected!
+        #               <span class="color-positive">●</span> 
+        #             </div>
+        #           {{ else }}
+        #             <div class="color-highlight size-h3">
+        #               Your VPN is not connected!
+        #               <span class="color-negative">●</span> 
+        #             </div>
+        #           {{ end }}
+        #         </div>
+        #         <div class="size-h5">{{ $ip }} - {{ $city }}, {{ $country }}</div>
+        #       </div>
+        #     </div>
+
+        - type: releases
+          cache: 1d
+          # Without authentication the Github API allows for up to 60 requests per hour. You can create a
+          # read-only token from your Github account settings and use it here to increase the limit.
+          token: ${GITHUB_TOKEN}
+          repositories:
+            - Balackburn/Apollo
+
+        - type: custom-api
+          title: Tailscale Devices
+          title-url: https://login.tailscale.com/admin/machines
+          url: https://api.tailscale.com/api/v2/tailnet/-/devices
+          headers:
+            Authorization: Bearer ${TAILSCALE_API_KEY}
+          cache: 10m
+          options:
+            # collapseAfter: 4
+            # disableOfflineIndicator: true
+            # disableUpdateIndicator: true
+            # prioritiseTags: true
+          template: |
+            <style>
+              .device-info-container-tailscale {
+                position: relative;
+                overflow: hidden;
+                height: 1.5em;
+              }
+
+              .device-info-tailscale {
+                display: flex;
+                transition: transform 0.2s ease, opacity 0.2s ease;
+              }
+
+              .device-ip-tailscale {
+                position: absolute;
+                top: 0;
+                left: 0;
+                transform: translateY(-100%);
+                opacity: 0;
+                transition: transform 0.2s ease, opacity 0.2s ease;
+              }
+
+              .device-info-container-tailscale:hover .device-info-tailscale {
+                transform: translateY(100%);
+                opacity: 0;
+              }
+
+              .device-info-container-tailscale:hover .device-ip-tailscale {
+                transform: translateY(0);
+                opacity: 1;
+              }
+
+              .update-indicator-tailscale {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background-color: var(--color-primary);
+                display: inline-block;
+                margin-left: 4px;
+                vertical-align: middle;
+              }
+
+              .offline-indicator-tailscale {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background-color: var(--color-negative);
+                display: inline-block;
+                margin-left: 4px;
+                vertical-align: middle;
+              }
+
+              .device-name-container-tailscale {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+              }
+
+              .indicators-container-tailscale {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+              }
+            </style>
+            <ul class="list list-gap-10 collapsible-container" data-collapse-after="{{ .Options.IntOr "collapseAfter" 3 }}">
+              {{ range .JSON.Array "devices" }}
+              <li>
+                <div class="flex items-center gap-10">
+                  <div class="device-name-container-tailscale grow">
+                    <span class="size-h4 block text-truncate color-primary">
+                      {{ findMatch "^([^.]+)" (.String "name") }}
+                    </span>
+                    <div class="indicators-container-tailscale">
+                      {{ if and (not ($.Options.BoolOr "disableUpdateIndicator" false)) (.Bool "updateAvailable") }}
+                      <span class="update-indicator-tailscale" data-popover-type="text" data-popover-text="Update Available"></span>
+                      {{ end }}
+
+                      {{ if not ($.Options.BoolOr "disableOfflineIndicator" false) }}
+                      {{ $lastSeen := .String "lastSeen" | parseTime "rfc3339" }}
+                      {{ if not ($lastSeen.After (offsetNow "-10s")) }}
+                      {{ $lastSeenTimezoned := $lastSeen.In now.Location }}
+                      <span class="offline-indicator-tailscale" data-popover-type="text"
+                        data-popover-text="Offline - Last seen {{ $lastSeenTimezoned.Format " Jan 2 3:04pm" }}"></span>
+                      {{ end }}
+                      {{ end }}
+
+                    </div>
+                  </div>
+                </div>
+                <div class="device-info-container-tailscale">
+                  <ul class="list-horizontal-text device-info-tailscale">
+                    <li>{{ .String "os" }}</li>
+                    <li>
+                      {{ if and ($.Options.BoolOr "prioritiseTags" false) (.Exists "tags.0") }}
+                        {{ trimPrefix "tag:" (.String "tags.0") }}
+                      {{ else }}
+                        {{ .String "user" }}
+                      {{ end }}
+                    </li>
+                  </ul>
+                  <div class="device-ip-tailscale">
+                    {{ .String "addresses.0"}}
+                  </div>
+                </div>
+              </li>
+              {{ end }}
+            </ul>
+
+        - type: custom-api
+          title: NextDNS Analytics
+          title-url: https://api.nextdns.io/profiles/${NEXTDNS_PROFILE_ID}/analytics/status
+          cache: 1h
+          url: https://api.nextdns.io/profiles/${NEXTDNS_PROFILE_ID}/analytics/status
+          headers:
+            X-Api-Key: ${NEXTDNS_API_KEY}
+          template: |
+            {{ if eq .Response.StatusCode 200 }}
+              <div style="display: flex; justify-content: space-between;">
+                {{ $total := 0.0 }}
+                {{ $blocked := 0.0 }}
+                {{ range .JSON.Array "data" }}
+                  {{ $total = add $total (.Int "queries" | toFloat) }}
+                  {{ if eq (.String "status") "blocked" }}
+                    {{ $blocked = add $blocked (.Int "queries" | toFloat) }}
+                  {{ end }}
+                {{ end }}
+                <div style="flex: 1; text-align: center;">
+                  <p>Queries</p>
+                  <p>{{ printf "%.0f" $total }}</p>
+                </div>
+                <div style="flex: 1; text-align: center; color: var(--color-negative);">
+                  <p>Blocked</p>
+                  <p>{{ printf "%.0f" $blocked }}</p>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                  <p>Block Rate</p>
+                  {{ if gt $total 0.0 }}
+                    <p>{{ div (mul $blocked 100) $total | printf "%.2f" }}%</p>
+                  {{ else }}
+                    <p>0.00%</p>
+                  {{ end }}
+                </div>
+              </div>
+            {{ else }}
+              <div style="text-align: center; color: var(--color-negative);">
+                Error: {{ .Response.StatusCode }} - {{ .Response.Status }}
+              </div>
+            {{ end }}
+
+    - size: full
+      widgets:
+
+        # 1. ACT
+        - type: search
+          search-engine: google
+          new-tab: true
+          autofocus: false
+          placeholder: "Decide and act…"
+          bangs:
+            - title: YouTube
+              shortcut: "!yt"
+              url: https://www.youtube.com/results?search_query={QUERY}
+            - title: GitHub
+              shortcut: "!gh"
+              url: https://github.com/search?q={QUERY}
+            - title: Reddit
+              shortcut: "!rd"
+              url: https://www.reddit.com/search/?q={QUERY}
+            - title: Stack Overflow
+              shortcut: "!so"
+              url: https://stackoverflow.com/search?q={QUERY}
+
+        # 2. READ
+        - type: group
+          title: "Read"
+          widgets:
+            - type: hacker-news
+              collapse-after: 5
+            - type: lobsters
+              collapse-after: 5
+
+        # 3. WATCH
+        - type: group
+          title: "Watch"
+          widgets:
+            - type: videos
+              channels:
+                - UCDNvRZRgvkBTUkQzFoT_8rA
+                - UC3egV8AyVrnwUEOkGZB-s2Q
+                - UCQ2O-iftmnlfrBuNsUUTofQ
+                - UCaKod3X1Tn4c7Ci0iUKcvzQ
+                - UChJof4NntaxU1VoJI8zt-Kw
+
+        # 4. BROWSE (lowest priority)
+        - type: group
+          title: "Browse"
+          widgets:
+            - type: reddit
+              subreddit: baseball
+              show-thumbnails: true
+              collapse-after: 3
+            - type: reddit
+              subreddit: koreanvariety
+              show-thumbnails: true
+              collapse-after: 3
+            - type: reddit
+              subreddit: apple
+              show-thumbnails: true
+              collapse-after: 3
+
+
+    - size: small
+      widgets:
+
+        - type: weather
+          location: Bangkok, Thailand
+          units: metric # alternatively "imperial"
+          hour-format: 12h # alternatively "24h"
+          # Optionally hide the location from being displayed in the widget
+          # hide-location: true
+        
+        - type: custom-api
+          title: Air Quality
+          cache: 10m
+          url: https://api.waqi.info/feed/geo:${WAQI_LAT};${WAQI_LON}/?token=${WAQI_TOKEN}
+          template: |
+            {{ $aqi := printf "%03s" (.JSON.String "data.aqi") }}
+            {{ $aqiraw := .JSON.String "data.aqi" }}
+            {{ $updated := .JSON.String "data.time.iso" }}
+            {{ $humidity := .JSON.String "data.iaqi.h.v" }}
+            {{ $ozone := .JSON.String "data.iaqi.o3.v" }}
+            {{ $pm25 := .JSON.String "data.iaqi.pm25.v" }}
+            {{ $pressure := .JSON.String "data.iaqi.p.v" }}
+
+            <div class="flex justify-between">
+              <div class="size-h5">
+                {{ if le $aqi "050" }}
+                  <div class="color-positive">Good air quality</div>
+                {{ else if le $aqi "100" }}
+                  <div class="color-primary">Moderate air quality</div>
+                {{ else }}
+                  <div class="color-negative">Bad air quality</div>
+                {{ end }}
+              </div>
+            </div>
+
+            <div class="color-highlight size-h2">AQI: {{ $aqiraw }}</div>
+            <div style="border-bottom: 1px solid; margin-block: 10px;"></div>
+
+            <div class="margin-block-2">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+
+                <div>
+                  <div class="size-h3 color-highlight">{{ $humidity }}%</div>
+                  <div class="size-h6">HUMIDITY</div>
+                </div>
+
+                <div>
+                  <div class="size-h3 color-highlight">{{ $ozone }} μg/m³</div>
+                  <div class="size-h6">OZONE</div>
+                </div>
+
+                <div>
+                  <div class="size-h3 color-highlight">{{ $pm25 }} μg/m³</div>
+                  <div class="size-h6">PM2.5</div>
+                </div>
+
+                <div>
+                  <div class="size-h3 color-highlight">{{ $pressure }} hPa</div>
+                  <div class="size-h6">PRESSURE</div>
+                </div>
+
+              </div>
+
+              <div class="size-h6" style="margin-top: 10px;">Last Updated at {{ slice $updated 11 16 }}</div>
+            </div>
+
+        - type: custom-api
+          title: MLB Today
+          url: "https://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&hydrate=linescore(runners),team"
+          cache: 15s
+          template: |
+            {{ $dates := .JSON.Array "dates" }}
+            {{ if eq (len $dates) 0 }}
+              <div style="padding:8px;text-align:center;">No games scheduled today.</div>
+            {{ else }}
+              {{ $games := (index $dates 0).Array "games" }}
+              {{ $wid := printf "mlb-%d" now.UnixNano }}
+              <div id="{{ $wid }}" style="position:relative;padding-bottom:{{ if gt (len $games) 6 }}25px{{ else }}0px{{ end }};">
+                <input type="checkbox" id="{{ $wid }}-cb" style="display:none"/>
+                <ul class="visible" style="list-style:none;padding:0;margin:0;">
+                  {{ $count := 0 }}
+                  {{ range $i, $g := $games }}
+                    {{ $abs := $g.String "status.abstractGameState" }}
+                    {{ if and (lt $count 6) (eq $abs "Live") }}
+                      {{ template "row" $g }}
+                      {{ $count = add $count 1 }}
+                    {{ end }}
+                  {{ end }}
+                  {{ range $i, $g := $games }}
+                    {{ $abs := $g.String "status.abstractGameState" }}
+                    {{ if and (lt $count 6) (eq $abs "Preview") }}
+                      {{ template "row" $g }}
+                      {{ $count = add $count 1 }}
+                    {{ end }}
+                  {{ end }}
+                  {{ range $i, $g := $games }}
+                    {{ $abs := $g.String "status.abstractGameState" }}
+                    {{ if and (lt $count 6) (ne $abs "Live") (ne $abs "Preview") }}
+                      {{ template "row" $g }}
+                      {{ $count = add $count 1 }}
+                    {{ end }}
+                  {{ end }}
+                </ul>
+                <ul class="all" style="list-style:none;padding:0;margin:0;display:none">
+                  {{ range $i, $g := $games }}
+                    {{ if eq ($g.String "status.abstractGameState") "Live" }}
+                      {{ template "row" $g }}
+                    {{ end }}
+                  {{ end }}
+                  {{ range $i, $g := $games }}
+                    {{ if eq ($g.String "status.abstractGameState") "Preview" }}
+                      {{ template "row" $g }}
+                    {{ end }}
+                  {{ end }}
+                  {{ range $i, $g := $games }}
+                    {{ $abs := $g.String "status.abstractGameState" }}
+                    {{ if and (ne $abs "Live") (ne $abs "Preview") }}
+                      {{ template "row" $g }}
+                    {{ end }}
+                  {{ end }}
+                </ul>
+                {{ if gt (len $games) 6 }}
+                  <label for="{{ $wid }}-cb" style="position:absolute;bottom:0px;right:0;cursor:pointer;color:var(--glance-accent-color);font-size:16px;padding:5px;">
+                    <span style="display:inline-block;transition:transform .2s;font-size:20px;">&#9662;</span>
+                  </label>
+                {{ end }}
+                <style>
+                  #{{ $wid }}-cb:not(:checked) ~ .all  { display:none!important }
+                  #{{ $wid }}-cb:checked   ~ .visible { display:none!important }
+                  #{{ $wid }}-cb:checked   ~ .all     { display:block!important }
+                  #{{ $wid }}-cb:checked   ~ label span { transform:rotate(180deg)!important }
+                </style>
+              </div>
+            {{ end }}
+            {{ define "row" }}
+              {{/* --- AWAY SIDE --- */}}
+              {{ $awayAbr  := .String "teams.away.team.abbreviation" }}
+              {{ $awayCode := .String "teams.away.team.fileCode" }}
+              {{ $awayRecW := .Int    "teams.away.leagueRecord.wins" }}
+              {{ $awayRecL := .Int    "teams.away.leagueRecord.losses" }}
+              {{ $awaySc   := .Int    "teams.away.score" }}
+              {{ $awayId   := .Int    "teams.away.team.id" }}
+              {{/* --- HOME SIDE --- */}}
+              {{ $homeAbr  := .String "teams.home.team.abbreviation" }}
+              {{ $homeCode := .String "teams.home.team.fileCode" }}
+              {{ $homeRecW := .Int    "teams.home.leagueRecord.wins" }}
+              {{ $homeRecL := .Int    "teams.home.leagueRecord.losses" }}
+              {{ $homeSc   := .Int    "teams.home.score" }}
+              {{ $homeId   := .Int    "teams.home.team.id" }}
+              {{/* status & linescore */}}
+              {{ $abs             := .String "status.abstractGameState" }}
+              {{ $detailed        := .String "status.detailedState" }}
+              {{ $live            := eq $abs "Live" }}
+              {{ $inningSt        := .String "linescore.inningState" }}
+              {{ $inningN         := .Int    "linescore.currentInning" }}
+              {{ $seriesDesc      := .String "seriesDescription" }}
+              {{ $seriesLabel     := .String "description" }}
+              {{ $seriesGame      := .Int    "seriesGameNumber" }}
+              {{ $isRegularSeries := or (eq $seriesDesc "Regular Season") (eq $seriesDesc "Regular Season 1") (eq $seriesDesc "Regular Season 2") (eq $seriesDesc "Regular Season 3") (eq $seriesDesc "Regular Season 4") }}
+              {{ $isPlayoffSeries := and (ne $seriesDesc "") (not $isRegularSeries) }}
+              {{/* offense & base occupancy */}}
+              {{ $r1        := .Exists "linescore.offense.first" }}
+              {{ $r2        := .Exists "linescore.offense.second" }}
+              {{ $r3        := .Exists "linescore.offense.third" }}
+              {{ $offTeamId := .Int    "linescore.offense.team.id" }}
+              <li style="display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--glance-divider);white-space:normal;"
+                  {{ if ne $abs "Preview" }}
+                    title="{{ $awayAbr }} Box:{{ range $i, $inning := (.Array "linescore.innings") }}
+                      {{ if lt $i 9 }}  Inning {{ add $i 1 }}: {{ $inning.Int "away.runs" }}{{ else }}  Inning {{ add $i 1 }}: {{ $inning.Int "away.runs" }}{{ end }}
+                    {{ end }}&#10;{{ $homeAbr }} Box:{{ range $i, $inning := (.Array "linescore.innings") }}
+                      {{ if lt $i 9 }}  Inning {{ add $i 1 }}: {{ $inning.Int "home.runs" }}{{ else }}  Inning {{ add $i 1 }}: {{ $inning.Int "home.runs" }}{{ end }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  {{ end }}"
+                  {{ end }}>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <span style="display:flex;align-items:center;width:80px;white-space:nowrap;">
+                    <img src='{{ if eq $awayCode "ana" }}https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/laa.png&h=24&w=24{{ else }}https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/{{ $awayCode }}.png&h=24&w=24{{ end }}'
+                        alt='{{ $awayAbr }}'
+                        style='width:24px;height:24px;margin-right:4px;'/>
+                    <span style="display:flex;flex-direction:column;margin-right:4px;">
+                      <span style="font-weight:bold;">{{ $awayAbr }}</span>
+                      <span style="font-size:0.7em;color:var(--glance-muted-text)">
+                        ({{ printf "%d-%d" $awayRecW $awayRecL }})
+                      </span>
+                    </span>
+                    {{ if ne $abs "Preview" }}
+                      <span style="margin-left:auto;font-size:1em;font-weight:700;font-variant-numeric:tabular-nums;color:var(--glance-heading-text);">{{ $awaySc }}</span>
+                    {{ end }}
+                    {{ if and $live (eq $offTeamId $awayId) }}
+                      <svg width="20" height="20" viewBox="0 0 24 24" style="margin-left:4px;flex-shrink:0;">
+                        <rect x="6" y="6" width="12" height="12" fill="#808080" transform="rotate(45 12 12)"/>
+                        {{ if $r1 }}<circle cx="17" cy="12" r="2.5" fill="white"/>{{ end }}
+                        {{ if $r2 }}<circle cx="12" cy="7" r="2.5" fill="white"/>{{ end }}
+                        {{ if $r3 }}<circle cx="7" cy="12" r="2.5" fill="white"/>{{ end }}
+                      </svg>
+                    {{ end }}
+                  </span>
+                <span style="text-align:center;width:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:0.9em;white-space:nowrap;">
+                  {{ if eq $abs "Preview" }}
+                    {{ $gameTime := (.String "gameDate" | parseTime "2006-01-02T15:04:05Z").In now.Location }}
+                    <span style="color:var(--glance-muted-text)">{{ printf "%02d:%02d" $gameTime.Hour $gameTime.Minute }}</span>
+                  {{ else if $live }}
+                    <span style="font-weight:500;">{{ printf "%s %d" $inningSt $inningN }}</span>
+                  {{ else if or (eq $detailed "Game Over") (eq $detailed "Final") }}
+                    <span style="font-size:1.1em;font-weight:500;">Final</span>
+                  {{ else }}
+                    <span>{{ $detailed }}</span>
+                  {{ end }}
+                  {{ if $isPlayoffSeries }}
+                    <span style="font-size:0.9em;color:var(--glance-accent-color);margin-top:0;">
+                      {{ if $seriesLabel }}
+                        {{ $seriesLabel }}
+                      {{ else if gt $seriesGame 0 }}
+                        {{ printf "%s (Game %d)" $seriesDesc $seriesGame }}
+                      {{ else }}
+                        {{ $seriesDesc }}
+                      {{ end }}
+                    </span>
+                  {{ end }}
+                </span>
+                  <span style="display:flex;align-items:center;width:80px;justify-content:flex-end;white-space:nowrap;">
+                    {{ if and $live (eq $offTeamId $homeId) }}
+                      <svg width="20" height="20" viewBox="0 0 24 24" style="margin-right:4px;flex-shrink:0;">
+                        <rect x="6" y="6" width="12" height="12" fill="#808080" transform="rotate(45 12 12)"/>
+                        {{ if $r1 }}<circle cx="17" cy="12" r="2.5" fill="white"/>{{ end }}
+                        {{ if $r2 }}<circle cx="12" cy="7" r="2.5" fill="white"/>{{ end }}
+                        {{ if $r3 }}<circle cx="7" cy="12" r="2.5" fill="white"/>{{ end }}
+                      </svg>
+                    {{ end }}
+                    {{ if ne $abs "Preview" }}
+                      <span style="margin-left:auto;font-size:1em;font-weight:700;font-variant-numeric:tabular-nums;color:var(--glance-heading-text);">{{ $homeSc }}</span>
+                    {{ end }}
+                    <span style="display:flex;flex-direction:column;margin-left:4px;text-align:right;">
+                      <span style="font-weight:bold;">{{ $homeAbr }}</span>
+                      <span style="font-size:0.7em;color:var(--glance-muted-text)">
+                        ({{ printf "%d-%d" $homeRecW $homeRecL }})
+                      </span>
+                    </span>
+                    <img src='{{ if eq $homeCode "ana" }}https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/laa.png&h=24&w=24{{ else }}https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/{{ $homeCode }}.png&h=24&w=24{{ end }}'
+                        alt='{{ $homeAbr }}'
+                        style='width:24px;height:24px;margin-left:4px;'/>
+                  </span>
+                </div>
+              </li>
+            {{ end }}
+
+        - type: custom-api
+          title: Last.fm
+          cache: 60s
+          url: http://ws.audioscrobbler.com/2.0/
+          parameters:
+            method: user.getRecentTracks
+            user: ${LASTFM_USERNAME}
+            api_key: ${LASTFM_API_KEY}
+            format: json
+            limit: 10
+          template: |
+            <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+              {{ range .JSON.Array "recenttracks.track" }}
+                <li class="flex items-center gap-10">
+                  <div style="border-radius: 5px; min-width: 5rem; max-width: 5rem; overflow: hidden;" class="card">
+                    <object data={{ .String "image.2.#text" }} type="image/png">
+                      <img src="https://lastfm.freetls.fastly.net/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.png" alt="Fallback">
+                    </object>
+                  </div>
+                  <div class="flex-1">
+                    <p class="color-positive size-h5">{{ .String "artist.#text" }}</p>
+                    <p class="size-h5">{{ .String "name" }}</p>
+                    <p class="size-h6">
+                      {{ if .String "@attr.nowplaying" }}
+                        <span class="color-positive">Now playing</span>
+                      {{ else }}
+                        <span class="color-subdue" {{ .String "date.#text" | parseRelativeTime "02 Jan 2006, 15:04" }}></span>
+                      {{ end }}
+                    </p>
+                  </div>
+                </li>
+              {{ end }}
+            </ul>
+
+        - type: custom-api
+          title: Trakt
+          cache: 30m
+          url: https://api.trakt.tv/users/${TRAKT_USERNAME}/history
+          parameters:
+            type: shows,movies
+            limit: 10
+            sort: watched_at,desc
+          headers:
+            trakt-api-key: ${TRAKT_API_KEY}
+            trakt-api-version: 2
+            User-Agent: GlanceWidget
+            Accept: application/json
+          template: |
+            {{/* USER VARIABLES BEGIN */}}
+            {{/* Number of items to show before SHOW MORE appears */}}
+            {{ $collapseAfter := 3 }}
+
+            {{/* Set to false to hide S#E# episode numbers on TV Shows */}}
+            {{ $showEpisodeNumber := true }}
+
+            {{/* Set to true to show year on Movies */}}
+            {{ $showMovieYear := false }}
+
+            {{/* Set to true to show year on TV Shows */}}
+            {{ $showTVYear := false }}
+            {{/* USER VARIABLES END */}}
+
+            <ul class="list list-gap-10 collapsible-container" data-collapse-after="{{ $collapseAfter }}">
+            {{ range .JSON.Array "" }}
+              {{ $tmdbID := "" }}
+              {{ $tmdbData := "" }}
+              {{ $mediaType := .String "type" }}
+              {{ $tmdbPageUrl := "" }}
+              {{ $imageUrlBase := "https://image.tmdb.org/t/p/w185" }}
+              {{ $posterPath := "" }}
+              {{ $posterUrl := "" }}
+              {{ if eq $mediaType "episode" }}
+                {{ $tmdbID = .String "show.ids.tmdb" }}
+                {{
+                  $tmdbData = newRequest (concat "https://api.themoviedb.org/3/tv/" $tmdbID "?api_key=" "${TMDB_API_KEY}")
+                  | withHeader "Accept" "application/json"
+                  | getResponse
+                }}
+                {{ $tmdbPageUrl = concat "https://www.themoviedb.org/tv/" $tmdbID }}
+              {{ else }}
+                {{ $tmdbID = .String "movie.ids.tmdb" }}
+                {{
+                  $tmdbData = newRequest (concat "https://api.themoviedb.org/3/movie/" $tmdbID "?api_key=" "${TMDB_API_KEY}")
+                  | withHeader "Accept" "application/json"
+                  | getResponse
+                }}
+                {{ $tmdbPageUrl = concat "https://www.themoviedb.org/movie/" $tmdbID }}
+              {{ end }}
+              {{ if $tmdbData }}
+                {{ $posterPath = $tmdbData.JSON.String "poster_path" }}
+                {{ if $posterPath }}
+                  {{ $posterUrl = concat $imageUrlBase $posterPath }}
+                {{ end }}
+              {{ end }}
+
+              <li class="flex items-center gap-10">
+                <a href={{ $tmdbPageUrl }} target="_blank">
+                  <img src='{{ $posterUrl }}' alt="" style="border-radius: 5px; min-width: 5rem; max-width: 5rem;" class="card">
+                </a>
+                <div class="flex-1">
+                  <a href={{ $tmdbPageUrl }} target="_blank">
+                    <p class="color-positive size-h5">{{ .String "show.title" }}{{ .String "movie.title" }}
+                    {{ if eq (.String "type") "movie" }}
+                      {{ if $showMovieYear }}
+                        ({{ .String "movie.year" }})
+                      {{ end }}
+                    {{ else }}
+                      {{ if $showTVYear }}
+                        ({{ .String "show.year" }})
+                      {{ end }}
+                    {{ end }}
+                    </p>
+                  </a>
+                  <a href={{ $tmdbPageUrl }} target="_blank">
+                    {{ if eq (.String "type") "episode" }}
+                    <p class="size-h5">
+                    {{ if $showEpisodeNumber }}
+                      (S{{ .String "episode.season" }}E{{ .String "episode.number" }}) 
+                    {{ end }}
+                    {{ .String "episode.title" }}
+                    </p>
+                    {{ end }}
+                  </a>
+                  <p class="size-h6">
+                    <span class="color-subdue" {{ .String "watched_at" | parseRelativeTime "2006-01-02T15:04:05.000Z" }}></span>
+                  </p>
+                </div>
+              </li>
+            {{ end }}
+            </ul>
+        - type: custom-api
+          title: xkcd
+          cache: 2m
+          url: https://xkcd.com/info.0.json
+          template: | 
+            <body> {{ .JSON.String "title" }}</body>
+            <img src="{{ .JSON.String "img" }}"></img>
