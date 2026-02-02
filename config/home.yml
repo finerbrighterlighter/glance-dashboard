@@ -17,6 +17,8 @@
               label: Tokyo
             - timezone: Asia/Hong_Kong
               label: Hong Kong
+            - timezone: Europe/Vienna
+              label: Linz
 
         - type: server-stats
           servers:
@@ -236,39 +238,7 @@
                   - title: RAMA-CEB
                     url: https://www.rama.mahidol.ac.th/ceb/
                   - title: Data Warehouse
-
-        - type: split-column
-          widgets:
-
-          - type: bookmarks
-            title: " "
-            groups:
-              - title: Reading
-                color: 40 55 55    # soft peach/yellow
-                links:
-                  - title: Hacker News
-                    url: https://news.ycombinator.com/
-                  - title: Allkpop
-                    url: https://www.allkpop.com/
-
-
-          - type: bookmarks
-            title: " "
-            groups:
-              - title: Social
-                color: 350 50 50   # muted maroon/red (intentional friction)
-                links:
-                  - title: YouTube
-                    url: https://www.youtube.com/
-                  - title: Reddit
-                    url: https://www.reddit.com/r/popular/
-                  - title: Twitter 
-                    url: https://x.com/
-                  - title: Facebook
-                    url: https://www.facebook.com
                     url: https://www.rama.mahidol.ac.th/ceb/CEBdatawarehouse/Overview
-                  - title: Gmail
-                    url: https://mail.google.com/mail/u/0/
 
         # 1. ACT
         - type: search
@@ -367,18 +337,6 @@
                 
         # 3. WATCH
         - type: group
-          title: "Watch"
-          widgets:
-            - type: videos
-              channels:
-                - UCDNvRZRgvkBTUkQzFoT_8rA
-                - UC3egV8AyVrnwUEOkGZB-s2Q
-                - UCQ2O-iftmnlfrBuNsUUTofQ
-                - UCaKod3X1Tn4c7Ci0iUKcvzQ
-                - UChJof4NntaxU1VoJI8zt-Kw
-
-        # 4. BROWSE (lowest priority)
-        - type: group
           title: "Browse"
           widgets:
             - type: reddit
@@ -390,10 +348,86 @@
               show-thumbnails: true
               collapse-after: 3
             - type: reddit
+              subreddit: runningman
+              show-thumbnails: true
+              collapse-after: 3
+            - type: reddit
+              subreddit: ynab
+              show-thumbnails: true
+              collapse-after: 3
+            - type: reddit
               subreddit: apple
               show-thumbnails: true
               collapse-after: 3
 
+        - type: group
+          title: "Watch"
+          widgets:
+            - type: videos
+              channels:
+                - UCDNvRZRgvkBTUkQzFoT_8rA
+                - UC3egV8AyVrnwUEOkGZB-s2Q
+                - UCQ2O-iftmnlfrBuNsUUTofQ
+                - UCaKod3X1Tn4c7Ci0iUKcvzQ
+                - UChJof4NntaxU1VoJI8zt-Kw
+
+        # 4. BROWSE (lowest priority)
+
+        - type: custom-api
+          title: Seasonal Anime
+          frameless: true
+          cache: 1d
+          url: https://api.jikan.moe/v4/seasons/now
+          template: |
+            {{ $arr := .JSON.Array "data" }}
+            <div style="overflow-x: auto; padding: 8px 0;">
+              <div class="cards-horizontal carousel-items-container" style="display: flex; gap: 16px; padding: 0 8px;">
+                {{ range $i, $el := $arr }}
+                  {{ if lt $i 15 }}
+                    {{ $image := $el.String "images.jpg.image_url" }}
+                    {{ $score := $el.Float "score" }}
+                    {{ $type := $el.String "type" }}
+                    {{ $episodes := $el.Int "episodes" }}
+                    
+                    <a href="{{ $el.String "url" }}" target="_blank" 
+                      class="card widget-content-frame" 
+                      style="flex: 0 0 auto; width: 150px; min-height: 260px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.1); background: var(--card-bg); text-decoration: none;">
+                      
+                      <!-- Thumbnail with Score -->
+                      <div style="height: 190px; overflow: hidden; position: relative;">
+                        <img src="{{ $image }}" alt="{{ $el.String "title" }}"
+                            style="width: 100%; height: 100%; object-fit: cover; object-position: center;"
+                            onerror="this.style.display='none'">
+                        {{ if gt $score 0.0 }}
+                        <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.9); color: white; padding: 3px 8px; border-radius: 12px; font-weight: bold; backdrop-filter: blur(4px); font-size: 11px;">
+                          ⭐ {{ $score }}
+                        </div>
+                        {{ end }}
+                      </div>
+                      
+                      <!-- Content -->
+                      <div style="padding: 12px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 70px;">
+                        <div class="size-base color-primary" 
+                            style="line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; margin-bottom: 8px;">
+                          {{ $el.String "title" }}
+                        </div>
+                        
+                        <div class="size-h6" style="display: flex; flex-direction: column; gap: 4px;">
+                          <div style="display: flex; align-items: center; gap: 6px;">
+                            <span>Type:</span>
+                            <span>{{ $type }}</span>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 6px;">
+                            <span>{{ if $episodes }}{{ $episodes }} Episodes{{ else }}Airing{{ end }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </a>
+                  {{ end }}
+                {{ end }}
+              </div>
+            </div>
+              
 
     - size: small
       widgets:
