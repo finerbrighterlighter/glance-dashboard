@@ -261,6 +261,9 @@
             - title: "Chatgpt (Temporary)"
               shortcut: "!chattemp"
               url: https://chatgpt.com/?q={QUERY}&hints=search&temporary-chat=true&model=auto
+            - title: OpenCode Agent
+              shortcut: "!oc"
+              url: http://${OPENCODE_SERVER_URL}/${OPENCODE_SESSION_ID}/session?prompt={QUERY}
 
         # 2. Monitor
 
@@ -438,11 +441,30 @@
           cache: 1m
           sites:
             - title: OpenCode Web
-              url: http://100.87.0.66:4011
+              url: https://fibrilinux.burmese-neon.ts.net:4011
+              check-url: https://fibrilinux.burmese-neon.ts.net:4011
               icon: si:openai
               basic-auth:
                 username: ${OPENCODE_SERVER_USERNAME}
                 password: ${OPENCODE_SERVER_PASSWORD}
+
+            - title: OpenCode 2 Beta
+              url: https://fibrilinux.burmese-neon.ts.net:4012
+              check-url: https://fibrilinux.burmese-neon.ts.net:4012
+              icon: si:openai
+              basic-auth:
+                username: opencode
+                password: ${OPENCODE_SERVER_PASSWORD}
+
+            - title: Youtube Music API
+              url: http://100.87.0.66:8078
+              check-url: http://100.87.0.66:8078/api/health?type=ytmusic
+              icon: si:youtubemusic
+
+            - title: CodexBar
+              url: https://fibrilinux.burmese-neon.ts.net:8081
+              check-url: http://100.87.0.66:18081/health
+              icon: si:openai
 
         # NOW: LOCAL SYSTEM HEALTH
         - type: docker-containers
