@@ -64,3 +64,39 @@ img, .thumbnail, .bookmarks-icon-container{border-radius:0}
   padding:3px 5px;color:var(--color-primary);background:var(--color-background)}
 .yt-cc-manual{background:var(--color-primary);color:var(--color-background)}
 .yt-cc-auto{border:1px dashed var(--color-primary);padding:2px 4px}
+
+/* ---------- YNAB widget (home.yml) — mirrors the YNAB dashboard's Now tab ---------- */
+.ynab{display:flex;flex-direction:column;gap:.4rem}
+.ynab-cycle{font:500 1.15rem var(--sans);color:var(--color-text-subdue);margin-top:-.2rem}
+.ynab-k{font:600 1.15rem var(--sans);color:var(--color-primary);margin-top:1rem;letter-spacing:.01em}
+.ynab-big{font:400 2.6rem/1.1 var(--serif);color:var(--color-text-highlight);font-variant-numeric:lining-nums tabular-nums}
+.ynab-note{font:600 1.05rem var(--sans);margin-left:.6rem;vertical-align:middle;letter-spacing:.02em}
+.ynab-big.color-negative{color:var(--color-negative)}
+/* range bar: hairline track, thicker 80% band, dot = likely, tick = ฿0 */
+.ynab-band{position:relative;height:12px;margin-top:.5rem}
+.ynab-band::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--color-separator)}
+.ynab-band-range{position:absolute;top:calc(50% - 2px);height:4px;background:var(--color-text-subdue);opacity:.5}
+.ynab-band-range.neg{background:var(--color-negative);opacity:.55}
+.ynab-band-zero{position:absolute;top:0;bottom:0;border-left:1px solid var(--color-text-base)}
+.ynab-band-dot{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;
+  background:var(--color-text-highlight)}
+.ynab-band-labels{display:flex;justify-content:space-between;font:400 1.1rem var(--sans);color:var(--color-text-subdue)}
+.ynab-row{margin-top:.5rem}
+.ynab-row-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.ynab-name{color:var(--color-text-highlight);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ynab-pover{font:600 1.1rem var(--sans);color:var(--color-text-subdue);flex-shrink:0}
+.ynab-pover.mid{color:var(--color-primary)}
+.ynab-pover.hi{color:var(--color-negative)}
+/* pace bar: spent of budget, tick = where spending usually is by today */
+.ynab-bar{position:relative;height:6px;margin:.35rem 0 .25rem;border-bottom:1px solid var(--color-separator)}
+.ynab-bar-fill{position:absolute;left:0;bottom:0;height:4px;background:var(--color-text-base)}
+.ynab-bar-fill.over{background:var(--color-negative)}
+.ynab-bar-tick{position:absolute;bottom:-3px;height:11px;border-left:1px solid var(--color-primary)}
+.ynab-row-foot{font:400 1.1rem var(--sans);color:var(--color-text-subdue);font-variant-numeric:tabular-nums}
+.ynab-calm{color:var(--color-text-subdue);font-style:italic}
+.ynab-over{font:500 1.15rem var(--sans);margin-top:.4rem}
+.ynab-foot{font:400 1.1rem var(--sans);color:var(--color-text-subdue);margin-top:1rem;padding-top:.6rem;
+  border-top:1px solid var(--color-separator)}
+.ynab-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin:0 .3rem 0 .5rem;vertical-align:middle}
+.ynab-dot.green{background:var(--color-positive)}
+.ynab-dot.yellow{background:hsl(43, 65%, 55%)}

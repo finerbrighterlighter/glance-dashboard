@@ -12,51 +12,72 @@
             - timezone: Asia/Tokyo
               label: Tokyo
 
+        # Data: ~/Sandbox/ynab/glance.py (run.sh, 4x/day) -> assets/ynab/ynab.json.
+        # cycle / cash / pace are dash_now.status, i.e. the YNAB dashboard's Now tab numbers.
+        # Styles: .ynab-* in assets/user.css.
         - type: custom-api
-          title: YNAB (Thailand)
+          title: YNAB · Thailand
+          title-url: https://fibrilinux.burmese-neon.ts.net:8086
           cache: 30m
           url: http://localhost:8080/assets/ynab/ynab.json
           template: |
-            <div class="flex flex-column gap-10">
-              <div class="flex justify-between">
-                <span>Ready to Assign</span>
-                <span class="size-h3 color-highlight">฿{{ printf "%.0f" (.JSON.Float "rta") }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span>🟢 buffer</span>
-                <span>฿{{ printf "%.0f" (.JSON.Float "buffer.green") }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span>🟡 buffer</span>
-                <span>฿{{ printf "%.0f" (.JSON.Float "buffer.yellow") }}</span>
+            {{ $thr := 0.6 }}{{ if ne (.JSON.String "p_over_threshold") "" }}{{ $thr = .JSON.Float "p_over_threshold" }}{{ end }}
+            <div class="ynab">
+              <div class="ynab-cycle">
+                day {{ .JSON.Int "cycle.day" }}/{{ .JSON.Int "cycle.days_total" }} · {{ .JSON.Int "cycle.days_to_salary" }}d to pay
               </div>
 
-              {{ if gt (len (.JSON.Array "overspent")) 0 }}
-              <div class="flex flex-column gap-5">
-                <span class="color-negative">Overspent</span>
-                {{ range .JSON.Array "overspent" }}
-                <div class="flex justify-between">
-                  <span>{{ .String "name" }}</span>
-                  <span class="color-negative">฿{{ printf "%.0f" (.Float "balance") }}</span>
-                </div>
-                {{ end }}
+              {{ if .JSON.Exists "cash.p50" }}
+              {{ $p10 := .JSON.Float "cash.p10" }}{{ $p50 := .JSON.Float "cash.p50" }}{{ $p90 := .JSON.Float "cash.p90" }}
+              {{ $lo := $p10 }}{{ if gt $lo 0.0 }}{{ $lo = 0.0 }}{{ end }}
+              {{ $hi := $p90 }}{{ if lt $hi 0.0 }}{{ $hi = 0.0 }}{{ end }}
+              {{ $span := sub $hi $lo }}{{ if le $span 0.0 }}{{ $span = 1.0 }}{{ end }}
+              <div class="ynab-k">Cash at payday</div>
+              <div class="ynab-big {{ if .JSON.Bool "cash.tight" }}color-negative{{ end }}">
+                {{ if lt $p50 0.0 }}−฿{{ formatNumber (toInt (mul $p50 -1.0)) }}{{ else }}฿{{ formatNumber (toInt $p50) }}{{ end }}{{ if .JSON.Bool "cash.tight" }}<span class="ynab-note">tight</span>{{ end }}
+              </div>
+              <div class="ynab-band" title="Likely range at payday {{ .JSON.String "cash.payday" }} (80%)">
+                {{ if lt $p10 0.0 }}{{ $negEnd := 0.0 }}{{ if lt $p90 0.0 }}{{ $negEnd = $p90 }}{{ end }}<span class="ynab-band-range neg" style="left: {{ mul (div (sub $p10 $lo) $span) 100.0 }}%; width: {{ mul (div (sub $negEnd $p10) $span) 100.0 }}%"></span>{{ end }}
+                {{ if gt $p90 0.0 }}{{ $posStart := 0.0 }}{{ if gt $p10 0.0 }}{{ $posStart = $p10 }}{{ end }}<span class="ynab-band-range" style="left: {{ mul (div (sub $posStart $lo) $span) 100.0 }}%; width: {{ mul (div (sub $p90 $posStart) $span) 100.0 }}%"></span>{{ end }}
+                <span class="ynab-band-zero" style="left: {{ mul (div (sub 0.0 $lo) $span) 100.0 }}%"></span>
+                <span class="ynab-band-dot" style="left: {{ mul (div (sub $p50 $lo) $span) 100.0 }}%"></span>
+              </div>
+              <div class="ynab-band-labels">
+                <span>{{ if lt $p10 0.0 }}−{{ formatNumber (toInt (mul $p10 -1.0)) }}{{ else }}{{ formatNumber (toInt $p10) }}{{ end }}</span>
+                <span>{{ if lt $p90 0.0 }}−{{ formatNumber (toInt (mul $p90 -1.0)) }}{{ else }}+{{ formatNumber (toInt $p90) }}{{ end }}</span>
               </div>
               {{ end }}
 
-              {{ if gt (len (.JSON.Array "at_risk")) 0 }}
-              <div class="flex flex-column gap-5">
-                <span class="color-highlight">At risk</span>
-                {{ range .JSON.Array "at_risk" }}
-                <div class="flex justify-between">
-                  <span>{{ .String "name" }}</span>
-                  <span>
-                    ฿{{ printf "%.0f" (.Float "spent") }} / ฿{{ printf "%.0f" (.Float "funds") }}
-                    (proj ฿{{ printf "%.0f" (.Float "projected") }})
-                  </span>
+              <div class="ynab-k">Pace</div>
+              {{ range .JSON.Array "pace" }}
+              {{ $f := .Float "funds" }}{{ $s := .Float "spent" }}
+              {{ $scale := $f }}{{ if gt $s $scale }}{{ $scale = $s }}{{ end }}{{ if le $scale 0.0 }}{{ $scale = 1.0 }}{{ end }}
+              <div class="ynab-row">
+                <div class="ynab-row-head">
+                  <span class="ynab-name {{ if .Bool "overspent" }}color-negative{{ end }}">{{ .String "name" }}</span>
+                  {{ if ne (.String "p_over") "" }}{{ $po := .Float "p_over" }}
+                  <span class="ynab-pover {{ if ge $po $thr }}hi{{ else if ge $po (div $thr 2.0) }}mid{{ end }}" title="Chance of ending the month over budget">{{ printf "%.0f" (mul $po 100.0) }}%</span>
+                  {{ end }}
                 </div>
-                {{ end }}
+                <div class="ynab-bar" title="Spent ฿{{ formatNumber (toInt $s) }} of ฿{{ formatNumber (toInt $f) }}; by today you'd usually be at ฿{{ formatNumber (toInt (.Float "expected_to_date")) }}">
+                  <span class="ynab-bar-fill {{ if gt $s $f }}over{{ end }}" style="width: {{ mul (div $s $scale) 100.0 }}%"></span>
+                  {{ if le (.Float "expected_to_date") $scale }}<span class="ynab-bar-tick" style="left: {{ mul (div (.Float "expected_to_date") $scale) 100.0 }}%"></span>{{ end }}
+                </div>
+                <div class="ynab-row-foot">฿{{ formatNumber (toInt $s) }} / {{ formatNumber (toInt $f) }} · heading to ฿{{ formatNumber (toInt (.Float "projected")) }}</div>
               </div>
+              {{ else }}
+              <div class="ynab-calm">All on pace.</div>
               {{ end }}
+
+              {{ range .JSON.Array "overspent" }}
+              <div class="ynab-over color-negative">{{ .String "name" | replaceMatches "^\\S+\\s" "" }} overspent −฿{{ formatNumber (toInt (mul (.Float "balance") -1.0)) }}</div>
+              {{ end }}
+
+              <div class="ynab-foot" title="Snapshot {{ .JSON.String "generated" }}">
+                Ready ฿{{ formatNumber (toInt (.JSON.Float "rta")) }}
+                · buffer <span class="ynab-dot green"></span>{{ formatNumber (toInt (.JSON.Float "buffer.green")) }}
+                <span class="ynab-dot yellow"></span>{{ formatNumber (toInt (.JSON.Float "buffer.yellow")) }}
+              </div>
             </div>
 
     - size: full
