@@ -93,4 +93,9 @@
               {{ if ne (.JSON.String "ovation.pct") "" }}
               <div class="aurora-line"><span>Chance now</span><span>{{ .JSON.Int "ovation.pct" }}% <span class="aurora-sub">NOAA model</span></span></div>
               {{ end }}
+              <div class="aurora-foot">
+                In Trondheim: <b>Kp 2–3</b> low on the northern horizon, <b>Kp 4</b> higher in the north,
+                <b>Kp 5+</b> overhead. Needs dark (Sep–Apr) and clear sky; look north, away from city lights.
+                Kp is planet-wide on a 0–9 scale; the % is NOAA's 30-minute nowcast for this spot.
+              </div>
             </div>
