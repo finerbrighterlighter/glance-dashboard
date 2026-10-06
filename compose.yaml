@@ -12,8 +12,15 @@ services:
     ports:
       - 3080:8080
     env_file: .env
+    networks:
+      - default
+      - wud_default
     labels:
       glance.name: Glance
       glance.icon: si:glance
-      glance.url: http://100.87.0.66
+      glance.url: https://fibrilinux.burmese-neon.ts.net:3081
       glance.description: Personal Dashboard
+
+networks:
+  wud_default:
+    external: true

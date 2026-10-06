@@ -2,35 +2,38 @@ server:
   assets-path: /app/assets
 
 theme:
-  # This will be the default theme
-  background-color: 229 19 23
-  contrast-multiplier: 1.2
-  primary-color: 222 74 74
-  positive-color: 96 44 68
-  negative-color: 359 68 71
+  # Editorial system shared with the YNAB + usage dashboards
+  # (~/Sandbox/ynab/dashboard/style.css): dark paper #15171a, ink #e9e7e0, accent #dcb85a
+  background-color: 216 11 9
+  contrast-multiplier: 1.1
+  primary-color: 43 65 61
+  positive-color: 120 24 59
+  negative-color: 356 62 68
 
   disable-picker: false
   presets:
-    catppuccin-frappe:
-      background-color: 229 19 23
-      contrast-multiplier: 1.2
-      primary-color: 222 74 74
-      positive-color: 96 44 68
-      negative-color: 359 68 71
-
-    catppuccin-latte:
+    editorial-light:
       light: true
-      background-color: 220 23 95
+      # paper #f3f3ef, ink #1b1d20, accent #8a5a0c
+      background-color: 60 14 95
+      contrast-multiplier: 1.1
+      primary-color: 37 84 29
+      positive-color: 123 23 39
+      negative-color: 358 66 34
+
+    rose-pine:
+      background-color: 249 22 12
       contrast-multiplier: 1.0
-      primary-color: 220 91 54
-      positive-color: 109 58 40
-      negative-color: 347 87 44
-  # Note: assets are cached by the browser, changes to the CSS file
-  # will not be reflected until the browser cache is cleared (Ctrl+F5)
-  # custom-css-file: assets/catppuccin_latte.css
+      primary-color: 2 55 83
+      positive-color: 189 43 73
+      negative-color: 343 76 68
+  custom-css-file: /assets/user.css
 
 
 pages:
   # It's not necessary to create a new file for each page and include it, you can simply
   # put its contents here, though multiple pages are easier to manage when separated
   - $include: home.yml
+  - $include: homelab.yml
+  - $include: fun.yml
+  - $include: norway.yml

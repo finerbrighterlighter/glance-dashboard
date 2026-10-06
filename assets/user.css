@@ -1,0 +1,58 @@
+/* Glance — same editorial system as the YNAB and usage dashboards
+ * (~/Sandbox/ynab/dashboard/style.css): paper and ink, one accent, hairlines.
+ * Newsreader for what is read, Karla for labels; no cards / shadows / rounded boxes.
+ * Colours live in glance.yml theme (dark default + "editorial-light" preset). */
+
+/* ---------- fonts (self-hosted, OFL; copied from the YNAB dashboard) ---------- */
+@font-face{font-family:"Newsreader";font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/newsreader-latin-opsz-normal.woff2) format("woff2-variations"),url(fonts/newsreader-latin-opsz-normal.woff2) format("woff2")}
+@font-face{font-family:"Newsreader";font-style:italic;font-weight:200 800;font-display:swap;src:url(fonts/newsreader-latin-opsz-italic.woff2) format("woff2-variations"),url(fonts/newsreader-latin-opsz-italic.woff2) format("woff2")}
+@font-face{font-family:"Karla";font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/karla-latin-wght-normal.woff2) format("woff2-variations"),url(fonts/karla-latin-wght-normal.woff2) format("woff2")}
+@font-face{font-family:"Karla";font-style:italic;font-weight:200 800;font-display:swap;src:url(fonts/karla-latin-wght-italic.woff2) format("woff2-variations"),url(fonts/karla-latin-wght-italic.woff2) format("woff2")}
+
+:root{
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --sans:"Karla",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --border-radius:0;
+}
+
+/* ---------- type ---------- */
+body{font-family:var(--serif);font-optical-sizing:auto;font-variant-numeric:lining-nums tabular-nums}
+input,button,select,
+.nav, .nav-item, .mobile-navigation,
+.widget-header, .widget-group-title, .expand-toggle-button,
+.size-h6, .size-h5, .text-very-compact, .list-horizontal-text{font-family:var(--sans)}
+
+/* widget titles read like the dashboards' kicker: small Karla, accent colour */
+/* (Glance's root is 10px, so 1.3rem ≈ the dashboards' .78rem kicker at 16px) */
+.widget-header{font-size:1.3rem;font-weight:600;letter-spacing:.01em;color:var(--color-primary);
+  padding-left:0;padding-right:0;margin-bottom:.6rem}
+.widget-header *{color:inherit;text-transform:none;font-size:inherit;letter-spacing:inherit}
+
+/* one accent: bookmark group titles drop their per-group colours */
+.bookmarks-group-title{color:var(--color-primary) !important;font-family:var(--sans);font-weight:600}
+
+/* ---------- no cards: hairline above each widget, flat everything ---------- */
+.widget-content:not(.widget-content-frameless), .widget-content-frame{
+  background:transparent;border:0;border-top:1px solid var(--color-separator);
+  box-shadow:none;border-radius:0;padding-left:0;padding-right:0}
+.widget-group-header, .widget-group-title{border-radius:0}
+img, .thumbnail, .bookmarks-icon-container{border-radius:0}
+*{box-shadow:none !important}
+
+/* ---------- follow system light/dark ----------
+ * Glance has no "auto" theme: the scheme is chosen server-side (data-scheme on <html>).
+ * When the default theme is active and the OS is in light mode, apply the
+ * editorial-light preset's variables here (values copied from glance.yml presets,
+ * plus what Glance's own [data-scheme=light] rules do). Picking any other preset in
+ * the theme picker opts out. */
+@media (prefers-color-scheme: light) {
+  :root[data-theme="default"]{
+    --scheme: 100% -;
+    --bgh: 60; --bgs: 14%; --bgl: 95%; --cm: 1.1;
+    --color-primary: hsl(37, 84%, 29%);
+    --color-positive: hsl(123, 23%, 39%);
+    --color-negative: hsl(358, 66%, 34%);
+    color-scheme: light;
+  }
+  :root[data-theme="default"] .flat-icon{filter:none !important}
+}

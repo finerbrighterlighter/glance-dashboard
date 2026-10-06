@@ -1,0 +1,68 @@
+- name: Norway
+  slug: norway
+  columns:
+    - size: small
+      widgets:
+        - type: clock
+          hour-format: 24h
+          timezones:
+            - timezone: Europe/Oslo
+              label: Oslo
+
+        - type: custom-api
+          title: NOK rate
+          cache: 6h
+          url: https://open.er-api.com/v6/latest/NOK
+          template: |
+            <ul class="list list-gap-10">
+              <li class="flex justify-between"><span>THB</span><span class="color-highlight">{{ .JSON.Float "rates.THB" | printf "%.3f" }}</span></li>
+              <li class="flex justify-between"><span>MMK</span><span>{{ .JSON.Float "rates.MMK" | printf "%.1f" }}</span></li>
+              <li class="flex justify-between"><span>JPY</span><span>{{ .JSON.Float "rates.JPY" | printf "%.2f" }}</span></li>
+              <li class="flex justify-between"><span>USD</span><span>{{ .JSON.Float "rates.USD" | printf "%.4f" }}</span></li>
+              <li class="flex justify-between"><span>EUR</span><span>{{ .JSON.Float "rates.EUR" | printf "%.4f" }}</span></li>
+            </ul>
+            <div class="size-h6 margin-top-10">per 1 NOK · MMK is the official CBM rate · {{ .JSON.String "time_last_update_utc" | trimSuffix " +0000" }}</div>
+
+    - size: full
+      widgets:
+        - type: group
+          title: "NRK"
+          widgets:
+            - type: rss
+              title: Toppsaker
+              style: detailed-list
+              limit: 20
+              collapse-after: 8
+              cache: 30m
+              feeds:
+                - url: https://www.nrk.no/toppsaker.rss
+            - type: rss
+              title: Norge
+              style: detailed-list
+              limit: 20
+              collapse-after: 8
+              cache: 30m
+              feeds:
+                - url: https://www.nrk.no/norge/toppsaker.rss
+            - type: rss
+              title: Urix
+              style: detailed-list
+              limit: 20
+              collapse-after: 8
+              cache: 30m
+              feeds:
+                - url: https://www.nrk.no/urix/toppsaker.rss
+
+    - size: small
+      widgets:
+        - type: weather
+          title: Oslo
+          location: Oslo, Norway
+          units: metric
+          hour-format: 24h
+
+        - type: weather
+          title: Bergen
+          location: Bergen, Norway
+          units: metric
+          hour-format: 24h

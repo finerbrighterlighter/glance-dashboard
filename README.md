@@ -29,10 +29,18 @@ After copying `.env.example` → `.env`, fill in the required API keys:
 - GitHub (releases widget) 
 - Tailscale
 - Last.fm
-- Trakt
-- TMDB
 - NextDNS
 - WAQI (air quality)
+- `WUD_URL=wud:3000` (Glance joins WUD's `wud_default` network; WUD must be running first)
+
+Some widgets read caches written by scripts in `scripts/`. Add them to the host crontab
+(they need `tailscale` and `uvx` on the host):
+```cron
+5 * * * *    ~/containers/glance/scripts/youtube_cache.py    # YouTube RSS feeds are down; yt-dlp instead
+15 * * * *   ~/containers/glance/scripts/f1_cache.sh         # f1api.dev is slower than Glance's timeout
+*/15 * * * * ~/containers/glance/scripts/tailscale_names.sh  # names for devices shared into the tailnet
+```
+Run each once by hand after cloning so the widgets have data immediately.
 
 Changes to .env require restarting containers:
 ``` bash
@@ -44,14 +52,16 @@ docker compose up -d
 ## Tracked
 
 Tracked in Git:
-- `docker-compose.yml` — deployment definition
+- `compose.yaml` — deployment definition
+- `scripts/` — cache scripts for widgets (see cron above)
 - `config/` — Glance configuration (dashboards, widgets)
-- `assets/` — custom CSS and static assets
+- `assets/` — custom CSS (`user.css`), self-hosted fonts and static assets
 - `.env.example` — required environment variables (no secrets)
 
 Not tracked:
 - `.env` — contains secrets
 - runtime data / Docker state
+- widget caches (`assets/f1`, `assets/youtube`, `assets/tailscale`) and `assets/ynab`
 
 ---
 
