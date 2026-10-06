@@ -1,7 +1,230 @@
 - name: Home
   slug: home
-  show-mobile-header: true
+  show-mobile-header: false
+  head-widgets:
+    - type: search
+      search-engine: google
+      new-tab: true
+      autofocus: false
+      placeholder: "Decide and act…"
+      bangs:
+        - title: YouTube
+          shortcut: "!yt"
+          url: https://www.youtube.com/results?search_query={QUERY}
+        - title: GitHub
+          shortcut: "!gh"
+          url: https://github.com/search?q={QUERY}
+        - title: Reddit
+          shortcut: "!rd"
+          url: https://www.reddit.com/search/?q={QUERY}
+        - title: Stack Overflow
+          shortcut: "!so"
+          url: https://stackoverflow.com/search?q={QUERY}
+        - title: "Chatgpt"
+          shortcut: "!chat"
+          url: https://chatgpt.com/?q={QUERY}&hints=search&model=auto
+        - title: "Chatgpt (Temporary)"
+          shortcut: "!chattemp"
+          url: https://chatgpt.com/?q={QUERY}&hints=search&temporary-chat=true&model=auto
+        - title: Claude
+          shortcut: "!cl"
+          url: https://claude.ai/new?q={QUERY}
+        - title: Claude Code (web)
+          shortcut: "!cc"
+          url: https://claude.ai/code?prompt={QUERY}
+        - title: OpenCode Agent
+          shortcut: "!oc"
+          url: http://${OPENCODE_SERVER_URL}/${OPENCODE_SESSION_ID}/session?prompt={QUERY}
+
   columns:
+    - size: full
+      widgets:
+        - type: split-column
+          max-columns: 2
+          widgets:
+            # Data: ~/Sandbox/ynab/glance.py (run.sh, 4x/day) -> assets/ynab/ynab.json.
+            # cycle / cash / pace are dash_now.status, i.e. the YNAB dashboard's Now tab numbers.
+            # Styles: .ynab-* in assets/user.css.
+            - type: custom-api
+              title: YNAB · Thailand
+              title-url: https://fibrilinux.burmese-neon.ts.net:8086
+              cache: 30m
+              url: http://localhost:8080/assets/ynab/ynab.json
+              template: |
+                {{ $thr := 0.6 }}{{ if ne (.JSON.String "p_over_threshold") "" }}{{ $thr = .JSON.Float "p_over_threshold" }}{{ end }}
+                <div class="ynab">
+                  <div class="ynab-cycle">
+                    day {{ .JSON.Int "cycle.day" }}/{{ .JSON.Int "cycle.days_total" }} · {{ .JSON.Int "cycle.days_to_salary" }}d to pay
+                  </div>
+
+                  {{ if .JSON.Exists "cash.p50" }}
+                  {{ $p10 := .JSON.Float "cash.p10" }}{{ $p50 := .JSON.Float "cash.p50" }}{{ $p90 := .JSON.Float "cash.p90" }}
+                  {{ $lo := $p10 }}{{ if gt $lo 0.0 }}{{ $lo = 0.0 }}{{ end }}
+                  {{ $hi := $p90 }}{{ if lt $hi 0.0 }}{{ $hi = 0.0 }}{{ end }}
+                  {{ $span := sub $hi $lo }}{{ if le $span 0.0 }}{{ $span = 1.0 }}{{ end }}
+                  <div class="ynab-k">Cash at payday</div>
+                  <div class="ynab-big {{ if .JSON.Bool "cash.tight" }}color-negative{{ end }}">
+                    {{ if lt $p50 0.0 }}−฿{{ formatNumber (toInt (mul $p50 -1.0)) }}{{ else }}฿{{ formatNumber (toInt $p50) }}{{ end }}{{ if .JSON.Bool "cash.tight" }}<span class="ynab-note">tight</span>{{ end }}
+                  </div>
+                  <div class="ynab-band" title="Likely range at payday {{ .JSON.String "cash.payday" }} (80%)">
+                    {{ if lt $p10 0.0 }}{{ $negEnd := 0.0 }}{{ if lt $p90 0.0 }}{{ $negEnd = $p90 }}{{ end }}<span class="ynab-band-range neg" style="left: {{ mul (div (sub $p10 $lo) $span) 100.0 }}%; width: {{ mul (div (sub $negEnd $p10) $span) 100.0 }}%"></span>{{ end }}
+                    {{ if gt $p90 0.0 }}{{ $posStart := 0.0 }}{{ if gt $p10 0.0 }}{{ $posStart = $p10 }}{{ end }}<span class="ynab-band-range" style="left: {{ mul (div (sub $posStart $lo) $span) 100.0 }}%; width: {{ mul (div (sub $p90 $posStart) $span) 100.0 }}%"></span>{{ end }}
+                    <span class="ynab-band-zero" style="left: {{ mul (div (sub 0.0 $lo) $span) 100.0 }}%"></span>
+                    <span class="ynab-band-dot" style="left: {{ mul (div (sub $p50 $lo) $span) 100.0 }}%"></span>
+                  </div>
+                  <div class="ynab-band-labels">
+                    <span>{{ if lt $p10 0.0 }}−{{ formatNumber (toInt (mul $p10 -1.0)) }}{{ else }}{{ formatNumber (toInt $p10) }}{{ end }}</span>
+                    <span>{{ if lt $p90 0.0 }}−{{ formatNumber (toInt (mul $p90 -1.0)) }}{{ else }}+{{ formatNumber (toInt $p90) }}{{ end }}</span>
+                  </div>
+                  {{ end }}
+
+                  <div class="ynab-k">Pace</div>
+                  {{ range .JSON.Array "pace" }}
+                  {{ $f := .Float "funds" }}{{ $s := .Float "spent" }}
+                  {{ $scale := $f }}{{ if gt $s $scale }}{{ $scale = $s }}{{ end }}{{ if le $scale 0.0 }}{{ $scale = 1.0 }}{{ end }}
+                  <div class="ynab-row">
+                    <div class="ynab-row-head">
+                      <span class="ynab-name {{ if .Bool "overspent" }}color-negative{{ end }}">{{ .String "name" }}</span>
+                      {{ if ne (.String "p_over") "" }}{{ $po := .Float "p_over" }}
+                      <span class="ynab-pover {{ if ge $po $thr }}hi{{ else if ge $po (div $thr 2.0) }}mid{{ end }}" title="Chance of ending the month over budget">{{ printf "%.0f" (mul $po 100.0) }}%</span>
+                      {{ end }}
+                    </div>
+                    <div class="ynab-bar" title="Spent ฿{{ formatNumber (toInt $s) }} of ฿{{ formatNumber (toInt $f) }}; by today you'd usually be at ฿{{ formatNumber (toInt (.Float "expected_to_date")) }}">
+                      <span class="ynab-bar-fill {{ if gt $s $f }}over{{ end }}" style="width: {{ mul (div $s $scale) 100.0 }}%"></span>
+                      {{ if le (.Float "expected_to_date") $scale }}<span class="ynab-bar-tick" style="left: {{ mul (div (.Float "expected_to_date") $scale) 100.0 }}%"></span>{{ end }}
+                    </div>
+                    <div class="ynab-row-foot">฿{{ formatNumber (toInt $s) }} / {{ formatNumber (toInt $f) }} · heading to ฿{{ formatNumber (toInt (.Float "projected")) }}</div>
+                  </div>
+                  {{ else }}
+                  <div class="ynab-calm">All on pace.</div>
+                  {{ end }}
+
+                  {{ range .JSON.Array "overspent" }}
+                  <div class="ynab-over color-negative">{{ .String "name" | replaceMatches "^\\S+\\s" "" }} overspent −฿{{ formatNumber (toInt (mul (.Float "balance") -1.0)) }}</div>
+                  {{ end }}
+
+                  <div class="ynab-foot" title="Snapshot {{ .JSON.String "generated" }}">
+                    Ready ฿{{ formatNumber (toInt (.JSON.Float "rta")) }}
+                    · buffer <span class="ynab-dot green"></span>{{ formatNumber (toInt (.JSON.Float "buffer.green")) }}
+                    <span class="ynab-dot yellow"></span>{{ formatNumber (toInt (.JSON.Float "buffer.yellow")) }}
+                  </div>
+                </div>
+            # AI usage: the usage dashboard's /api/now (~/Sandbox/usage_dashboard, collector */5 min),
+            # read over Tailscale Serve (the dashboard only listens on 127.0.0.1). Styles: .usage-* in user.css.
+            # OpenRouter is prepaid credit: balance + runway, never a % bar.
+            - type: custom-api
+              title: AI usage
+              title-url: https://fibrilinux.burmese-neon.ts.net:8084
+              cache: 5m
+              url: https://fibrilinux.burmese-neon.ts.net:8084/api/now
+              template: |
+                {{ $now := .JSON.Int "now" }}{{ $prev := "" }}
+                <div class="usage">
+                  {{ range .JSON.Array "cards" }}
+                  {{ $p := .String "provider" }}
+                  {{ if ne $p $prev }}
+                  <div class="usage-provider">{{ if eq $p "claude" }}Claude{{ else if eq $p "codex" }}Codex{{ else if eq $p "copilot" }}Copilot{{ else if eq $p "openrouter" }}OpenRouter{{ else }}{{ $p }}{{ end }}</div>
+                  {{ $prev = $p }}{{ end }}
+                  <div class="usage-row {{ if .Bool "stale" }}stale{{ end }}">
+                    {{ if .Exists "credit.balance" }}
+                    <div class="usage-head">
+                      <span>${{ printf "%.2f" (.Float "credit.balance") }} left</span>
+                      <span class="usage-pace">{{ if ne (.String "credit.runway_days") "" }}~{{ printf "%.0f" (.Float "credit.runway_days") }} days{{ end }}</span>
+                    </div>
+                    <div class="usage-foot">${{ printf "%.2f" (.Float "credit.burn_per_day") }}/day · {{ .String "credit.burn_basis" }}{{ if .Bool "stale" }} · stale{{ end }}</div>
+                    {{ else }}
+                    {{ $u := .Float "used_pct" }}{{ $proj := .Float "projected_pct" }}
+                    {{ $w := $u }}{{ if gt $w 100.0 }}{{ $w = 100.0 }}{{ end }}
+                    <div class="usage-head">
+                      <span>{{ .String "label" }}</span>
+                      <span class="usage-pct {{ if ge $u 100.0 }}hi{{ end }}">{{ printf "%.0f" $u }}%</span>
+                    </div>
+                    <div class="usage-bar" title="{{ printf "%.0f" $u }}% used{{ if ne (.String "elapsed_pct") "" }}, {{ printf "%.0f" (.Float "elapsed_pct") }}% of the window gone; heading to {{ printf "%.0f" $proj }}%{{ end }}">
+                      <span class="usage-fill {{ if ge $proj 100.0 }}hi{{ end }}" style="width: {{ $w }}%"></span>
+                      {{ if and (ne (.String "elapsed_pct") "") (not (.Bool "idle")) }}<span class="usage-tick" style="left: {{ .Float "elapsed_pct" }}%"></span>{{ end }}
+                    </div>
+                    <div class="usage-foot">
+                      {{ if .Bool "stale" }}stale{{ else if .Bool "idle" }}idle{{ else }}<span class="usage-pace {{ if ge $proj 100.0 }}hi{{ else if eq (.String "pace_label") "ahead" }}mid{{ end }}">{{ .String "pace_label" }}</span>{{ end }}
+                      {{ if ne (.String "amount_label") "" }} · {{ .String "amount_label" }}{{ end }}
+                      {{ if and (ne (.String "resets_at") "") (not (.Bool "idle")) }}{{ $s := sub (toFloat (.Int "resets_at")) (toFloat $now) }}
+                      · resets in {{ if ge $s 172800.0 }}{{ printf "%.0f" (div $s 86400.0) }}d{{ else if ge $s 3600.0 }}{{ $si := toInt $s }}{{ div (toFloat $si) 3600.0 | toInt | printf "%dh" }} {{ printf "%02dm" (toInt (div (toFloat (mod $si 3600)) 60.0)) }}{{ else }}{{ printf "%.0f" (div $s 60.0) }}m{{ end }}
+                      {{ end }}
+                    </div>
+                    {{ end }}
+                  </div>
+                  {{ end }}
+                </div>
+
+        - type: split-column
+          max-columns: 2
+          widgets:
+
+          - type: bookmarks
+            title: " "
+            groups:
+              - title: Academic Presence
+                color: 210 45 50   # muted sapphire-blue
+                links:
+                  - title: Google Scholar
+                    url: https://scholar.google.com/citations?user=7waEOqcAAAAJ&hl=en
+                  - title: ORCID
+                    url: https://orcid.org/0000-0002-1076-9513
+                  - title: Scopus
+                    url: https://www.scopus.com/authid/detail.uri?authorId=57221250282
+                  - title: PubMed
+                    url: https://pubmed.ncbi.nlm.nih.gov/?sort=date&term=Teza+H&cauthor_id=40796195
+
+          - type: bookmarks
+            title: " "
+            groups:
+              - title: Professional/Work
+                color: 150 45 45   # desaturated teal/green
+                links:
+                  - title: Portfolio
+                    url: https://htunteza.com
+                  - title: GitHub
+                    url: https://github.com/finerbrighterlighter                
+                  - title: RAMA-CEB
+                    url: https://www.rama.mahidol.ac.th/ceb/
+                  - title: Data Warehouse
+                    url: https://www.rama.mahidol.ac.th/ceb/CEBdatawarehouse/Overview
+
+        - type: group
+          title: "Research"
+          widgets:
+            - type: rss
+              title: medRxiv · Epi
+              style: detailed-list
+              limit: 15
+              collapse-after: 5
+              cache: 6h
+              feeds:
+                - url: https://connect.medrxiv.org/medrxiv_xml.php?subject=epidemiology
+            - type: rss
+              title: arXiv · stat.ME
+              style: detailed-list
+              limit: 15
+              collapse-after: 5
+              cache: 6h
+              feeds:
+                - url: https://rss.arxiv.org/rss/stat.ME
+            - type: rss
+              title: arXiv · stat.AP + q-bio.PE
+              style: detailed-list
+              limit: 15
+              collapse-after: 5
+              cache: 6h
+              feeds:
+                - url: https://rss.arxiv.org/rss/stat.AP+q-bio.PE
+            - type: rss
+              title: My papers
+              style: detailed-list
+              limit: 15
+              collapse-after: 5
+              cache: 12h
+              feeds:
+                - url: https://pubmed.ncbi.nlm.nih.gov/rss/search/16YUOEaK6JjGWPKDN8Ly2PGsnUJ1vHYp5SwiXbx1TalkV9CIJf/?limit=15
+
     - size: small
       widgets:
         - type: clock
@@ -11,6 +234,8 @@
               label: Pyinmana
             - timezone: Asia/Tokyo
               label: Tokyo
+            - timezone: Europe/Oslo
+              label: Trondheim
 
         # ENVIRONMENT / PHYSICAL CONTEXT
         - type: weather
@@ -74,264 +299,4 @@
               </div>
 
               <div class="size-h6" style="margin-top: 10px;">Last Updated at {{ slice $updated 11 16 }}</div>
-            </div>
-
-    - size: full
-      widgets:
-        - type: split-column
-          widgets:
-
-          - type: bookmarks
-            title: " "
-            groups:
-              - title: Academic Presence
-                color: 210 45 50   # muted sapphire-blue
-                links:
-                  - title: Google Scholar
-                    url: https://scholar.google.com/citations?user=7waEOqcAAAAJ&hl=en
-                  - title: ORCID
-                    url: https://orcid.org/0000-0002-1076-9513
-                  - title: Scopus
-                    url: https://www.scopus.com/authid/detail.uri?authorId=57221250282
-                  - title: PubMed
-                    url: https://pubmed.ncbi.nlm.nih.gov/?sort=date&term=Teza+H&cauthor_id=40796195
-
-          - type: bookmarks
-            title: " "
-            groups:
-              - title: Professional/Work
-                color: 150 45 45   # desaturated teal/green
-                links:
-                  - title: Portfolio
-                    url: https://htunteza.com
-                  - title: GitHub
-                    url: https://github.com/finerbrighterlighter                
-                  - title: RAMA-CEB
-                    url: https://www.rama.mahidol.ac.th/ceb/
-                  - title: Data Warehouse
-                    url: https://www.rama.mahidol.ac.th/ceb/CEBdatawarehouse/Overview
-
-        - type: search
-          search-engine: google
-          new-tab: true
-          autofocus: false
-          placeholder: "Decide and act…"
-          bangs:
-            - title: YouTube
-              shortcut: "!yt"
-              url: https://www.youtube.com/results?search_query={QUERY}
-            - title: GitHub
-              shortcut: "!gh"
-              url: https://github.com/search?q={QUERY}
-            - title: Reddit
-              shortcut: "!rd"
-              url: https://www.reddit.com/search/?q={QUERY}
-            - title: Stack Overflow
-              shortcut: "!so"
-              url: https://stackoverflow.com/search?q={QUERY}
-            - title: "Chatgpt"
-              shortcut: "!chat"
-              url: https://chatgpt.com/?q={QUERY}&hints=search&model=auto
-            - title: "Chatgpt (Temporary)"
-              shortcut: "!chattemp"
-              url: https://chatgpt.com/?q={QUERY}&hints=search&temporary-chat=true&model=auto
-            - title: Claude
-              shortcut: "!cl"
-              url: https://claude.ai/new?q={QUERY}
-            - title: Claude Code (web)
-              shortcut: "!cc"
-              url: https://claude.ai/code?prompt={QUERY}
-            - title: OpenCode Agent
-              shortcut: "!oc"
-              url: http://${OPENCODE_SERVER_URL}/${OPENCODE_SESSION_ID}/session?prompt={QUERY}
-
-        - type: group
-          title: "Watch"
-          widgets:
-            # YouTube's RSS feeds 404 since 2026-10-04, so the built-in `videos` widget can't fetch.
-            # scripts/youtube_cache.py (cron, hourly) lists uploads with yt-dlp; channels live there.
-            # Count-based, not days: newest 8 per channel (PER_CHANNEL), merged, newest 25 kept (LIMIT).
-            # Busy channels fill more of the row; the window is ~2 weeks at current upload pace.
-            # EN patch: solid = channel's English subs, dashed = auto captions on English videos.
-            # Markup copied from Glance's videos.html / video-card-contents.html so it looks the same.
-            # When the feeds return, switch back to `type: videos` with the same channel list.
-            - type: custom-api
-              title: Videos
-              frameless: true
-              cache: 30m
-              url: http://localhost:8080/assets/youtube/videos.json
-              template: |
-                <div class="carousel-container">
-                  <div class="cards-horizontal carousel-items-container">
-                    {{ range .JSON.Array "videos" }}
-                    <div class="card widget-content-frame thumbnail-parent">
-                      <div class="yt-thumb">
-                        <img class="video-thumbnail thumbnail" loading="lazy" src="{{ .String "thumbnail" }}" alt="">
-                        {{ if eq (.String "cc") "manual" }}<span class="yt-cc yt-cc-manual" title="English subtitles">EN</span>
-                        {{ else if eq (.String "cc") "auto" }}<span class="yt-cc yt-cc-auto" title="English auto-generated captions">EN</span>{{ end }}
-                      </div>
-                      <div class="margin-top-10 margin-bottom-widget flex flex-column grow padding-inline-widget">
-                        <a class="text-truncate-2-lines margin-bottom-auto color-primary-if-not-visited" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "title" }}</a>
-                        <ul class="list-horizontal-text flex-nowrap margin-top-7">
-                          <li class="shrink-0" data-dynamic-relative-time="{{ .Int "timestamp" }}"></li>
-                          <li class="min-width-0">
-                            <a class="block text-truncate" href="{{ .String "author_url" }}" target="_blank" rel="noreferrer">{{ .String "author" }}</a>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                    {{ end }}
-                  </div>
-                </div>
-
-        - type: group
-          title: "Research"
-          widgets:
-            - type: rss
-              title: My papers
-              style: detailed-list
-              limit: 15
-              collapse-after: 5
-              cache: 12h
-              feeds:
-                - url: https://pubmed.ncbi.nlm.nih.gov/rss/search/16YUOEaK6JjGWPKDN8Ly2PGsnUJ1vHYp5SwiXbx1TalkV9CIJf/?limit=15
-            - type: rss
-              title: medRxiv · Epi
-              style: detailed-list
-              limit: 15
-              collapse-after: 5
-              cache: 6h
-              feeds:
-                - url: https://connect.medrxiv.org/medrxiv_xml.php?subject=epidemiology
-            - type: rss
-              title: arXiv · stat.ME
-              style: detailed-list
-              limit: 15
-              collapse-after: 5
-              cache: 6h
-              feeds:
-                - url: https://rss.arxiv.org/rss/stat.ME
-            - type: rss
-              title: arXiv · stat.AP + q-bio.PE
-              style: detailed-list
-              limit: 15
-              collapse-after: 5
-              cache: 6h
-              feeds:
-                - url: https://rss.arxiv.org/rss/stat.AP+q-bio.PE
-
-    - size: small
-      widgets:
-        # Data: ~/Sandbox/ynab/glance.py (run.sh, 4x/day) -> assets/ynab/ynab.json.
-        # cycle / cash / pace are dash_now.status, i.e. the YNAB dashboard's Now tab numbers.
-        # Styles: .ynab-* in assets/user.css.
-        - type: custom-api
-          title: YNAB · Thailand
-          title-url: https://fibrilinux.burmese-neon.ts.net:8086
-          cache: 30m
-          url: http://localhost:8080/assets/ynab/ynab.json
-          template: |
-            {{ $thr := 0.6 }}{{ if ne (.JSON.String "p_over_threshold") "" }}{{ $thr = .JSON.Float "p_over_threshold" }}{{ end }}
-            <div class="ynab">
-              <div class="ynab-cycle">
-                day {{ .JSON.Int "cycle.day" }}/{{ .JSON.Int "cycle.days_total" }} · {{ .JSON.Int "cycle.days_to_salary" }}d to pay
-              </div>
-
-              {{ if .JSON.Exists "cash.p50" }}
-              {{ $p10 := .JSON.Float "cash.p10" }}{{ $p50 := .JSON.Float "cash.p50" }}{{ $p90 := .JSON.Float "cash.p90" }}
-              {{ $lo := $p10 }}{{ if gt $lo 0.0 }}{{ $lo = 0.0 }}{{ end }}
-              {{ $hi := $p90 }}{{ if lt $hi 0.0 }}{{ $hi = 0.0 }}{{ end }}
-              {{ $span := sub $hi $lo }}{{ if le $span 0.0 }}{{ $span = 1.0 }}{{ end }}
-              <div class="ynab-k">Cash at payday</div>
-              <div class="ynab-big {{ if .JSON.Bool "cash.tight" }}color-negative{{ end }}">
-                {{ if lt $p50 0.0 }}−฿{{ formatNumber (toInt (mul $p50 -1.0)) }}{{ else }}฿{{ formatNumber (toInt $p50) }}{{ end }}{{ if .JSON.Bool "cash.tight" }}<span class="ynab-note">tight</span>{{ end }}
-              </div>
-              <div class="ynab-band" title="Likely range at payday {{ .JSON.String "cash.payday" }} (80%)">
-                {{ if lt $p10 0.0 }}{{ $negEnd := 0.0 }}{{ if lt $p90 0.0 }}{{ $negEnd = $p90 }}{{ end }}<span class="ynab-band-range neg" style="left: {{ mul (div (sub $p10 $lo) $span) 100.0 }}%; width: {{ mul (div (sub $negEnd $p10) $span) 100.0 }}%"></span>{{ end }}
-                {{ if gt $p90 0.0 }}{{ $posStart := 0.0 }}{{ if gt $p10 0.0 }}{{ $posStart = $p10 }}{{ end }}<span class="ynab-band-range" style="left: {{ mul (div (sub $posStart $lo) $span) 100.0 }}%; width: {{ mul (div (sub $p90 $posStart) $span) 100.0 }}%"></span>{{ end }}
-                <span class="ynab-band-zero" style="left: {{ mul (div (sub 0.0 $lo) $span) 100.0 }}%"></span>
-                <span class="ynab-band-dot" style="left: {{ mul (div (sub $p50 $lo) $span) 100.0 }}%"></span>
-              </div>
-              <div class="ynab-band-labels">
-                <span>{{ if lt $p10 0.0 }}−{{ formatNumber (toInt (mul $p10 -1.0)) }}{{ else }}{{ formatNumber (toInt $p10) }}{{ end }}</span>
-                <span>{{ if lt $p90 0.0 }}−{{ formatNumber (toInt (mul $p90 -1.0)) }}{{ else }}+{{ formatNumber (toInt $p90) }}{{ end }}</span>
-              </div>
-              {{ end }}
-
-              <div class="ynab-k">Pace</div>
-              {{ range .JSON.Array "pace" }}
-              {{ $f := .Float "funds" }}{{ $s := .Float "spent" }}
-              {{ $scale := $f }}{{ if gt $s $scale }}{{ $scale = $s }}{{ end }}{{ if le $scale 0.0 }}{{ $scale = 1.0 }}{{ end }}
-              <div class="ynab-row">
-                <div class="ynab-row-head">
-                  <span class="ynab-name {{ if .Bool "overspent" }}color-negative{{ end }}">{{ .String "name" }}</span>
-                  {{ if ne (.String "p_over") "" }}{{ $po := .Float "p_over" }}
-                  <span class="ynab-pover {{ if ge $po $thr }}hi{{ else if ge $po (div $thr 2.0) }}mid{{ end }}" title="Chance of ending the month over budget">{{ printf "%.0f" (mul $po 100.0) }}%</span>
-                  {{ end }}
-                </div>
-                <div class="ynab-bar" title="Spent ฿{{ formatNumber (toInt $s) }} of ฿{{ formatNumber (toInt $f) }}; by today you'd usually be at ฿{{ formatNumber (toInt (.Float "expected_to_date")) }}">
-                  <span class="ynab-bar-fill {{ if gt $s $f }}over{{ end }}" style="width: {{ mul (div $s $scale) 100.0 }}%"></span>
-                  {{ if le (.Float "expected_to_date") $scale }}<span class="ynab-bar-tick" style="left: {{ mul (div (.Float "expected_to_date") $scale) 100.0 }}%"></span>{{ end }}
-                </div>
-                <div class="ynab-row-foot">฿{{ formatNumber (toInt $s) }} / {{ formatNumber (toInt $f) }} · heading to ฿{{ formatNumber (toInt (.Float "projected")) }}</div>
-              </div>
-              {{ else }}
-              <div class="ynab-calm">All on pace.</div>
-              {{ end }}
-
-              {{ range .JSON.Array "overspent" }}
-              <div class="ynab-over color-negative">{{ .String "name" | replaceMatches "^\\S+\\s" "" }} overspent −฿{{ formatNumber (toInt (mul (.Float "balance") -1.0)) }}</div>
-              {{ end }}
-
-              <div class="ynab-foot" title="Snapshot {{ .JSON.String "generated" }}">
-                Ready ฿{{ formatNumber (toInt (.JSON.Float "rta")) }}
-                · buffer <span class="ynab-dot green"></span>{{ formatNumber (toInt (.JSON.Float "buffer.green")) }}
-                <span class="ynab-dot yellow"></span>{{ formatNumber (toInt (.JSON.Float "buffer.yellow")) }}
-              </div>
-            </div>
-
-        # AI usage: the usage dashboard's /api/now (~/Sandbox/usage_dashboard, collector */5 min),
-        # read over Tailscale Serve (the dashboard only listens on 127.0.0.1). Styles: .usage-* in user.css.
-        # OpenRouter is prepaid credit: balance + runway, never a % bar.
-        - type: custom-api
-          title: AI usage
-          title-url: https://fibrilinux.burmese-neon.ts.net:8084
-          cache: 5m
-          url: https://fibrilinux.burmese-neon.ts.net:8084/api/now
-          template: |
-            {{ $now := .JSON.Int "now" }}{{ $prev := "" }}
-            <div class="usage">
-              {{ range .JSON.Array "cards" }}
-              {{ $p := .String "provider" }}
-              {{ if ne $p $prev }}
-              <div class="usage-provider">{{ if eq $p "claude" }}Claude{{ else if eq $p "codex" }}Codex{{ else if eq $p "copilot" }}Copilot{{ else if eq $p "openrouter" }}OpenRouter{{ else }}{{ $p }}{{ end }}</div>
-              {{ $prev = $p }}{{ end }}
-              <div class="usage-row {{ if .Bool "stale" }}stale{{ end }}">
-                {{ if .Exists "credit.balance" }}
-                <div class="usage-head">
-                  <span>${{ printf "%.2f" (.Float "credit.balance") }} left</span>
-                  <span class="usage-pace">{{ if ne (.String "credit.runway_days") "" }}~{{ printf "%.0f" (.Float "credit.runway_days") }} days{{ end }}</span>
-                </div>
-                <div class="usage-foot">${{ printf "%.2f" (.Float "credit.burn_per_day") }}/day · {{ .String "credit.burn_basis" }}{{ if .Bool "stale" }} · stale{{ end }}</div>
-                {{ else }}
-                {{ $u := .Float "used_pct" }}{{ $proj := .Float "projected_pct" }}
-                {{ $w := $u }}{{ if gt $w 100.0 }}{{ $w = 100.0 }}{{ end }}
-                <div class="usage-head">
-                  <span>{{ .String "label" }}</span>
-                  <span class="usage-pct {{ if ge $u 100.0 }}hi{{ end }}">{{ printf "%.0f" $u }}%</span>
-                </div>
-                <div class="usage-bar" title="{{ printf "%.0f" $u }}% used{{ if ne (.String "elapsed_pct") "" }}, {{ printf "%.0f" (.Float "elapsed_pct") }}% of the window gone; heading to {{ printf "%.0f" $proj }}%{{ end }}">
-                  <span class="usage-fill {{ if ge $proj 100.0 }}hi{{ end }}" style="width: {{ $w }}%"></span>
-                  {{ if and (ne (.String "elapsed_pct") "") (not (.Bool "idle")) }}<span class="usage-tick" style="left: {{ .Float "elapsed_pct" }}%"></span>{{ end }}
-                </div>
-                <div class="usage-foot">
-                  {{ if .Bool "stale" }}stale{{ else if .Bool "idle" }}idle{{ else }}<span class="usage-pace {{ if ge $proj 100.0 }}hi{{ else if eq (.String "pace_label") "ahead" }}mid{{ end }}">{{ .String "pace_label" }}</span>{{ end }}
-                  {{ if ne (.String "amount_label") "" }} · {{ .String "amount_label" }}{{ end }}
-                  {{ if and (ne (.String "resets_at") "") (not (.Bool "idle")) }}{{ $s := sub (toFloat (.Int "resets_at")) (toFloat $now) }}
-                  · resets in {{ if ge $s 172800.0 }}{{ printf "%.0f" (div $s 86400.0) }}d{{ else if ge $s 3600.0 }}{{ $si := toInt $s }}{{ div (toFloat $si) 3600.0 | toInt | printf "%dh" }} {{ printf "%02dm" (toInt (div (toFloat (mod $si 3600)) 60.0)) }}{{ else }}{{ printf "%.0f" (div $s 60.0) }}m{{ end }}
-                  {{ end }}
-                </div>
-                {{ end }}
-              </div>
-              {{ end }}
             </div>
