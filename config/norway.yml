@@ -91,13 +91,10 @@
               <div class="aurora-line"><span>Clouds</span><span>{{ .JSON.Int "tonight.cloud_start" }}% → {{ .JSON.Int "tonight.cloud_end" }}% <span class="aurora-sub">min {{ .JSON.Int "tonight.cloud_min" }}%</span></span></div>
               {{ end }}
               {{ if ne (.JSON.String "ovation.pct") "" }}
-              <div class="aurora-line"><span>NOAA model</span><span>{{ .JSON.Int "ovation.pct" }} <span class="aurora-sub">of 100 · OVATION</span></span></div>
+              <div class="aurora-line" title="NOAA OVATION aurora value (0–100) for this grid cell, about an hour ahead. Not a local % chance."><span>NOAA model</span><span>{{ .JSON.Int "ovation.pct" }} <span class="aurora-sub">of 100 · OVATION</span></span></div>
               {{ end }}
-              <div class="aurora-foot">
-                Kp is a planet-wide 0–9 index, only a rough guide here. In Trondheim <b>Kp 2–3</b> can bring
-                aurora to the northern sky, sometimes overhead; <b>Kp 4+</b> usually means brighter, wider
-                displays; <b>Kp 5+</b> makes overhead aurora likely. Needs dark (roughly Sep–Apr) and clear
-                sky; for weak displays get away from city lights with an open view north.
-                NOAA model = OVATION aurora value (0–100) for this grid cell, about an hour ahead.
+              <div class="aurora-foot" title="Kp is a planet-wide 0–9 index, not where the aurora is: a rough guide only.">
+                <b>Kp 2–3</b> north sky · <b>4+</b> brighter · <b>5+</b> overhead<br>
+                Rough guide; needs dark and clear sky.
               </div>
             </div>
