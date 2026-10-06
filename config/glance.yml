@@ -1,6 +1,10 @@
 server:
   assets-path: /app/assets
 
+# Duck mascot from ~/GitHub/hugo_between/static/general (htunteza.com)
+branding:
+  logo-url: /assets/brand/duck_mascot.svg
+
 theme:
   # Editorial system shared with the YNAB + usage dashboards
   # (~/Sandbox/ynab/dashboard/style.css): dark paper #15171a, ink #e9e7e0, accent #dcb85a
