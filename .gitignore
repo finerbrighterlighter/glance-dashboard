@@ -27,3 +27,5 @@ assets/ynab/
 assets/f1/
 assets/youtube/
 assets/tailscale/
+assets/aurora/
+__pycache__/

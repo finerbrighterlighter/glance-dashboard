@@ -68,3 +68,29 @@
           location: Trondheim, Norway
           units: metric
           hour-format: 24h
+
+        # Aurora outlook: scripts/aurora_cache.py (cron */30) -> assets/aurora/aurora.json.
+        # NOAA SWPC Kp now + forecast, NOAA OVATION cell for Trondheim, Open-Meteo clouds/sun.
+        # Styles: .aurora-* in assets/user.css.
+        - type: custom-api
+          title: Aurora · Trondheim
+          title-url: https://www.swpc.noaa.gov/products/aurora-30-minute-forecast
+          cache: 15m
+          url: http://localhost:8080/assets/aurora/aurora.json
+          template: |
+            <div class="aurora">
+              <div class="aurora-verdict {{ .JSON.String "verdict_level" }}">{{ .JSON.String "verdict" }}</div>
+              <div class="aurora-line"><span>Kp now</span><span>{{ printf "%.1f" (.JSON.Float "kp_now") }} <span class="aurora-sub">{{ .JSON.String "kp_now_level" }}</span></span></div>
+              <div class="aurora-line"><span>Tonight</span><span>max Kp {{ printf "%.1f" (.JSON.Float "tonight.kp_max") }} <span class="aurora-sub">{{ .JSON.String "tonight.start" }}–{{ .JSON.String "tonight.end" }}</span></span></div>
+              <div class="aurora-spark" title="Kp forecast in 3-hour steps (scale 0–9); line at Kp 3">
+                {{ range .JSON.Array "tonight.kp_steps" }}
+                <div class="aurora-step"><span class="aurora-bar {{ if ge (.Float "kp") 3.0 }}hot{{ end }}" style="height: {{ mul (div (.Float "kp") 9.0) 100.0 }}%"></span><span class="aurora-t">{{ .String "t" }}</span></div>
+                {{ end }}
+              </div>
+              {{ if ne (.JSON.String "tonight.cloud_mean") "" }}
+              <div class="aurora-line"><span>Clouds</span><span>{{ .JSON.Int "tonight.cloud_start" }}% → {{ .JSON.Int "tonight.cloud_end" }}% <span class="aurora-sub">min {{ .JSON.Int "tonight.cloud_min" }}%</span></span></div>
+              {{ end }}
+              {{ if ne (.JSON.String "ovation.pct") "" }}
+              <div class="aurora-line"><span>Chance now</span><span>{{ .JSON.Int "ovation.pct" }}% <span class="aurora-sub">NOAA model</span></span></div>
+              {{ end }}
+            </div>

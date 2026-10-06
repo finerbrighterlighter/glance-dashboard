@@ -118,3 +118,20 @@ img, .thumbnail, .bookmarks-icon-container{border-radius:0}
 .usage-foot{font:400 1.1rem var(--sans);color:var(--color-text-subdue)}
 .usage-pace.mid{color:var(--color-primary)}
 .usage-pace.hi{color:var(--color-negative)}
+
+/* ---------- Aurora widget (norway.yml) ---------- */
+.aurora{display:flex;flex-direction:column;gap:.45rem}
+.aurora-verdict{font:400 1.7rem/1.2 var(--serif);color:var(--color-text-highlight);margin-bottom:.3rem}
+.aurora-verdict.good{color:var(--color-positive)}
+.aurora-verdict.maybe{color:var(--color-primary)}
+.aurora-line{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.aurora-line > span:first-child{font:600 1.1rem var(--sans);color:var(--color-text-subdue)}
+.aurora-sub{font:400 1.1rem var(--sans);color:var(--color-text-subdue);margin-left:.3rem}
+/* Kp per 3-hour step, 0-9 scale; hairline at Kp 3 */
+.aurora-spark{position:relative;display:flex;gap:4px;height:44px;margin:.2rem 0 1.4rem;
+  border-bottom:1px solid var(--color-separator)}
+.aurora-spark::before{content:"";position:absolute;left:0;right:0;bottom:33.3%;border-top:1px dashed var(--color-separator)}
+.aurora-step{position:relative;flex:1;display:flex;align-items:flex-end;justify-content:center}
+.aurora-bar{width:60%;background:var(--color-text-subdue);opacity:.6}
+.aurora-bar.hot{background:var(--color-positive);opacity:1}
+.aurora-t{position:absolute;bottom:-1.4rem;font:400 1rem var(--sans);color:var(--color-text-subdue)}

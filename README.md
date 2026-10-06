@@ -39,6 +39,7 @@ Some widgets read caches written by scripts in `scripts/`. Add them to the host 
 5 * * * *    ~/containers/glance/scripts/youtube_cache.py    # YouTube RSS feeds are down; yt-dlp instead
 15 * * * *   ~/containers/glance/scripts/f1_cache.sh         # f1api.dev is slower than Glance's timeout
 */15 * * * * ~/containers/glance/scripts/tailscale_names.sh  # names for devices shared into the tailnet
+*/30 * * * * ~/containers/glance/scripts/aurora_cache.py      # Trondheim aurora outlook (NOAA + Open-Meteo)
 ```
 Run each once by hand after cloning so the widgets have data immediately.
 
@@ -66,7 +67,7 @@ Tracked in Git:
 Not tracked:
 - `.env` — contains secrets
 - runtime data / Docker state
-- widget caches (`assets/f1`, `assets/youtube`, `assets/tailscale`) and `assets/ynab`
+- widget caches (`assets/f1`, `assets/youtube`, `assets/tailscale`, `assets/aurora`) and `assets/ynab`
 
 ---
 
