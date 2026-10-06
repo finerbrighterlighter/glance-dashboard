@@ -133,6 +133,9 @@
           widgets:
             # YouTube's RSS feeds 404 since 2026-10-04, so the built-in `videos` widget can't fetch.
             # scripts/youtube_cache.py (cron, hourly) lists uploads with yt-dlp; channels live there.
+            # Count-based, not days: newest 8 per channel (PER_CHANNEL), merged, newest 25 kept (LIMIT).
+            # Busy channels fill more of the row; the window is ~2 weeks at current upload pace.
+            # EN patch: solid = channel's English subs, dashed = auto captions on English videos.
             # Markup copied from Glance's videos.html / video-card-contents.html so it looks the same.
             # When the feeds return, switch back to `type: videos` with the same channel list.
             - type: custom-api
@@ -145,7 +148,11 @@
                   <div class="cards-horizontal carousel-items-container">
                     {{ range .JSON.Array "videos" }}
                     <div class="card widget-content-frame thumbnail-parent">
-                      <img class="video-thumbnail thumbnail" loading="lazy" src="{{ .String "thumbnail" }}" alt="">
+                      <div class="yt-thumb">
+                        <img class="video-thumbnail thumbnail" loading="lazy" src="{{ .String "thumbnail" }}" alt="">
+                        {{ if eq (.String "cc") "manual" }}<span class="yt-cc yt-cc-manual" title="English subtitles">EN</span>
+                        {{ else if eq (.String "cc") "auto" }}<span class="yt-cc yt-cc-auto" title="English auto-generated captions">EN</span>{{ end }}
+                      </div>
                       <div class="margin-top-10 margin-bottom-widget flex flex-column grow padding-inline-widget">
                         <a class="text-truncate-2-lines margin-bottom-auto color-primary-if-not-visited" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "title" }}</a>
                         <ul class="list-horizontal-text flex-nowrap margin-top-7">

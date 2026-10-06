@@ -56,3 +56,11 @@ img, .thumbnail, .bookmarks-icon-container{border-radius:0}
   }
   :root[data-theme="default"] .flat-icon{filter:none !important}
 }
+
+/* ---------- Videos: English-caption patch (home.yml Videos widget) ----------
+ * solid = English subtitles from the channel, dashed = YouTube auto captions */
+.yt-thumb{position:relative}
+.yt-cc{position:absolute;top:6px;right:6px;font:700 1rem/1 var(--sans);letter-spacing:.06em;
+  padding:3px 5px;color:var(--color-primary);background:var(--color-background)}
+.yt-cc-manual{background:var(--color-primary);color:var(--color-background)}
+.yt-cc-auto{border:1px dashed var(--color-primary);padding:2px 4px}

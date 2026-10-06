@@ -6,10 +6,19 @@ assets/youtube/videos.json for the custom-api "Videos" widget in home.yml.
 
 Dates come from yt-dlp's approximate_date (the "3 days ago" text), so they are
 day-precision. Run hourly from cron.
+
+Each video also gets `cc` for the English-caption badge:
+  manual  an English subtitle track uploaded by the channel
+  auto    no manual track, English-language video with YouTube speech captions
+  none    neither (auto-translated English exists on nearly everything, so ignored)
+Results are kept in captions.json; only videos under RECHECK_DAYS old without
+manual subs are looked up again, since channels often add subs after upload.
 """
+import glob
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 CHANNELS = [
@@ -22,7 +31,12 @@ CHANNELS = [
 PER_CHANNEL = 8
 LIMIT = 25  # same as Glance's videos widget default
 
+RECHECK_DAYS = 7
+
 OUT = Path(__file__).resolve().parent.parent / "assets" / "youtube" / "videos.json"
+CAPTIONS = OUT.with_name("captions.json")
+# Full video lookups need a JS runtime; yt-dlp only looks for deno by default.
+NODE = (sorted(glob.glob(str(Path.home() / ".config/nvm/versions/node/*/bin/node"))) or [None])[-1]
 
 
 def channel_videos(channel_id):
@@ -42,6 +56,7 @@ def channel_videos(channel_id):
         if not e.get("id") or not e.get("timestamp"):
             continue
         yield {
+            "id": e["id"],
             "title": e.get("title") or "",
             "url": f"https://www.youtube.com/watch?v={e['id']}",
             "thumbnail": f"https://i.ytimg.com/vi/{e['id']}/hqdefault.jpg",
@@ -49,6 +64,40 @@ def channel_videos(channel_id):
             "author": author,
             "author_url": author_url,
         }
+
+
+def caption_status(info):
+    if any(k.split("-")[0] == "en" for k in info.get("subtitles") or {}):
+        return "manual"
+    lang = (info.get("language") or "").split("-")[0]
+    auto = info.get("automatic_captions") or {}
+    if lang == "en" and any(k.split("-")[0] == "en" for k in auto):
+        return "auto"
+    return "none"
+
+
+def add_captions(videos):
+    cache = json.loads(CAPTIONS.read_text()) if CAPTIONS.exists() else {}
+    now = time.time()
+    todo = [
+        v for v in videos
+        if v["id"] not in cache
+        or (cache[v["id"]] != "manual" and now - v["timestamp"] < RECHECK_DAYS * 86400)
+    ]
+    if todo:
+        cmd = ["/usr/bin/uvx", "yt-dlp@latest", "--ignore-errors", "--skip-download", "-j"]
+        if NODE:
+            cmd[3:3] = ["--js-runtimes", f"node:{NODE}"]
+        proc = subprocess.run(cmd + [v["url"] for v in todo], capture_output=True, text=True, timeout=600)
+        for line in proc.stdout.splitlines():
+            info = json.loads(line)
+            cache[info["id"]] = caption_status(info)
+    for v in videos:
+        v["cc"] = cache.get(v["id"], "none")
+    keep = {v["id"] for v in videos}
+    tmp = CAPTIONS.with_suffix(".tmp")
+    tmp.write_text(json.dumps({k: s for k, s in cache.items() if k in keep}))
+    tmp.replace(CAPTIONS)
 
 
 def main():
@@ -70,9 +119,16 @@ def main():
         videos.extend(v for v in old if v["author_url"] in failed_urls)
 
     videos.sort(key=lambda v: v["timestamp"], reverse=True)
+    videos = videos[:LIMIT]
+    for v in videos:
+        v.setdefault("id", v["url"].rsplit("=", 1)[-1])
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        add_captions(videos)
+    except Exception as exc:  # badges are optional; never block the video list
+        print(f"youtube cache: captions failed: {exc}", file=sys.stderr)
     tmp = OUT.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"videos": videos[:LIMIT]}, ensure_ascii=False))
+    tmp.write_text(json.dumps({"videos": videos}, ensure_ascii=False))
     tmp.replace(OUT)
     return 0
 

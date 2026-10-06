@@ -42,6 +42,11 @@ Some widgets read caches written by scripts in `scripts/`. Add them to the host 
 ```
 Run each once by hand after cloning so the widgets have data immediately.
 
+Videos widget (Home): count-based, not a date window. `youtube_cache.py` takes the newest
+8 uploads per channel (`PER_CHANNEL`), merges them and keeps the newest 25 (`LIMIT`).
+Channels that upload often take more of the row. Each card gets an EN patch:
+solid = English subtitles from the channel, dashed = YouTube auto captions (English videos only).
+
 Changes to .env require restarting containers:
 ``` bash
 docker compose up -d
