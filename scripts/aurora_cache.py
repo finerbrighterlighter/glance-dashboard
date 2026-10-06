@@ -3,12 +3,15 @@
 
 Sources (all free, no key):
   NOAA SWPC   Kp now (1-minute estimate) and the 3-day Kp forecast (3-hour steps)
-  NOAA OVATION  aurora probability nowcast on a 1-degree grid (~900 KB; we keep one cell)
+  NOAA OVATION  aurora model value 0-100 on a 1-degree grid, ~1 h ahead (~900 KB; we keep
+                one cell). The file labels it only "Aurora" -- not presented as a probability.
   Open-Meteo  hourly cloud cover, sunrise/sunset and daylight length for Trondheim
 
 "Tonight" = today's sunset -> tomorrow's sunrise (or now -> sunrise if already dark).
-Rule of thumb at ~63 N: Kp 2-3 shows low on the northern horizon, ~5 overhead; it
-only matters when it is dark (roughly Sep-Apr) and the sky is clear.
+Kp is a planet-wide index, so the verdict thresholds are a rough guide for ~63 N, not
+where the aurora actually is: Kp 2-3 can reach the northern sky (sometimes overhead),
+4+ brighter and wider, 5+ overhead likely. Darkness (roughly Sep-Apr) and clear sky are
+the hard requirements.
 Run every 30 min from cron. On failure the previous file is kept.
 """
 import json
