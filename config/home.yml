@@ -112,6 +112,8 @@
             # AI usage: the usage dashboard's /api/now (~/Sandbox/usage_dashboard, collector */5 min),
             # read over Tailscale Serve (the dashboard only listens on 127.0.0.1). Styles: .usage-* in user.css.
             # OpenRouter is prepaid credit: balance + runway, never a % bar.
+        # Red only when pace is 'ahead' AND projected >= 100%: projected_pct extrapolates the last
+        # 30 min, so on 7-day windows a short burst alone reads 400%+ (same rule as the dashboard).
             - type: custom-api
               title: AI usage
               title-url: https://fibrilinux.burmese-neon.ts.net:8084
@@ -133,18 +135,18 @@
                     </div>
                     <div class="usage-foot">${{ printf "%.2f" (.Float "credit.burn_per_day") }}/day · {{ .String "credit.burn_basis" }}{{ if .Bool "stale" }} · stale{{ end }}</div>
                     {{ else }}
-                    {{ $u := .Float "used_pct" }}{{ $proj := .Float "projected_pct" }}
+                    {{ $u := .Float "used_pct" }}{{ $proj := .Float "projected_pct" }}{{ $hot := and (eq (.String "pace_label") "ahead") (ge $proj 100.0) }}
                     {{ $w := $u }}{{ if gt $w 100.0 }}{{ $w = 100.0 }}{{ end }}
                     <div class="usage-head">
                       <span>{{ .String "label" }}</span>
                       <span class="usage-pct {{ if ge $u 100.0 }}hi{{ end }}">{{ printf "%.0f" $u }}%</span>
                     </div>
-                    <div class="usage-bar" title="{{ printf "%.0f" $u }}% used{{ if ne (.String "elapsed_pct") "" }}, {{ printf "%.0f" (.Float "elapsed_pct") }}% of the window gone; heading to {{ printf "%.0f" $proj }}%{{ end }}">
-                      <span class="usage-fill {{ if ge $proj 100.0 }}hi{{ end }}" style="width: {{ $w }}%"></span>
+                    <div class="usage-bar" title="{{ printf "%.0f" $u }}% used{{ if ne (.String "elapsed_pct") "" }}, {{ printf "%.0f" (.Float "elapsed_pct") }}% of the window gone{{ if eq (.String "pace_label") "ahead" }}; heading to {{ printf "%.0f" $proj }}% at the recent rate{{ end }}{{ end }}">
+                      <span class="usage-fill {{ if $hot }}hi{{ end }}" style="width: {{ $w }}%"></span>
                       {{ if and (ne (.String "elapsed_pct") "") (not (.Bool "idle")) }}<span class="usage-tick" style="left: {{ .Float "elapsed_pct" }}%"></span>{{ end }}
                     </div>
                     <div class="usage-foot">
-                      {{ if .Bool "stale" }}stale{{ else if .Bool "idle" }}idle{{ else }}<span class="usage-pace {{ if ge $proj 100.0 }}hi{{ else if eq (.String "pace_label") "ahead" }}mid{{ end }}">{{ .String "pace_label" }}</span>{{ end }}
+                      {{ if .Bool "stale" }}stale{{ else if .Bool "idle" }}idle{{ else }}<span class="usage-pace {{ if $hot }}hi{{ else if eq (.String "pace_label") "ahead" }}mid{{ end }}">{{ .String "pace_label" }}</span>{{ end }}
                       {{ if ne (.String "amount_label") "" }} · {{ .String "amount_label" }}{{ end }}
                       {{ if and (ne (.String "resets_at") "") (not (.Bool "idle")) }}{{ $s := sub (toFloat (.Int "resets_at")) (toFloat $now) }}
                       · resets in {{ if ge $s 172800.0 }}{{ printf "%.0f" (div $s 86400.0) }}d{{ else if ge $s 3600.0 }}{{ $si := toInt $s }}{{ div (toFloat $si) 3600.0 | toInt | printf "%dh" }} {{ printf "%02dm" (toInt (div (toFloat (mod $si 3600)) 60.0)) }}{{ else }}{{ printf "%.0f" (div $s 60.0) }}m{{ end }}
