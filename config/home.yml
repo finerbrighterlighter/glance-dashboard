@@ -191,6 +191,7 @@
 
         - type: group
           title: "Research"
+          css-class: research   # .research in user.css hides thumbnails (papers have none worth showing)
           widgets:
             - type: rss
               title: medRxiv · Epi
