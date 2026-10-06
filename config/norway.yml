@@ -7,7 +7,7 @@
           hour-format: 24h
           timezones:
             - timezone: Europe/Oslo
-              label: Oslo
+              label: Trondheim
 
         - type: custom-api
           title: NOK rate
@@ -28,6 +28,14 @@
         - type: group
           title: "NRK"
           widgets:
+            - type: rss
+              title: Trøndelag
+              style: detailed-list
+              limit: 20
+              collapse-after: 8
+              cache: 30m
+              feeds:
+                - url: https://www.nrk.no/trondelag/toppsaker.rss
             - type: rss
               title: Toppsaker
               style: detailed-list
@@ -56,13 +64,7 @@
     - size: small
       widgets:
         - type: weather
-          title: Oslo
-          location: Oslo, Norway
-          units: metric
-          hour-format: 24h
-
-        - type: weather
-          title: Bergen
-          location: Bergen, Norway
+          title: Trondheim
+          location: Trondheim, Norway
           units: metric
           hour-format: 24h
